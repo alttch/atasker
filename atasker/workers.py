@@ -232,6 +232,9 @@ class BackgroundQueueWorker(_BackgroundAsyncWorkerAbstract):
                 break
             await asyncio.sleep(self.supervisor.poll_delay)
 
+    def get_queue_obj(self):
+        return self._Q
+
     def after_stop(self):
         try:
             self.put(None)
@@ -246,19 +249,22 @@ class BackgroundEventWorker(_BackgroundAsyncWorkerAbstract):
             self._set_event(), loop=self.supervisor.event_loop)
 
     async def _set_event(self):
-        self.event.set()
+        self._E.set()
 
     async def loop(self, *args, **kwargs):
-        self.event = asyncio.Event()
+        self._E = asyncio.Event()
         self.mark_started()
         while self._active:
             while self._run_thread:
                 await asyncio.sleep(self.poll_delay)
-            await self.event.wait()
-            self.event.clear()
+            await self._E.wait()
+            self._E.clear()
             if not self._active or not self.launch_run_task():
                 break
-            # await asyncio.sleep(self.supervisor.poll_delay)
+            await asyncio.sleep(self.supervisor.poll_delay)
+
+    def get_event_obj(self):
+        return self._E
 
     def after_stop(self):
         try:
