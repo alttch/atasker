@@ -214,12 +214,20 @@ class BackgroundIntervalWorker(_BackgroundAsyncWorkerAbstract):
 
 class BackgroundQueueWorker(_BackgroundAsyncWorkerAbstract):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        q = kwargs.get('q', kwargs.get('queue'))
+        if isinstance(q, type):
+            self._qclass = q
+        else:
+            self._qclass = asyncio.queues.Queue
+
     def put(self, t):
         asyncio.run_coroutine_threadsafe(
             self._Q.put(t), loop=self.supervisor.event_loop)
 
     async def loop(self, *args, **kwargs):
-        self._Q = asyncio.queues.Queue()
+        self._Q = self._qclass()
         self.mark_started()
         while self._active:
             while self._run_thread:
