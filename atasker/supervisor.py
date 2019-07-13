@@ -66,20 +66,20 @@ class TaskSupervisor:
             loop=self.event_loop)
         return True
 
-    def register_scheduler(self, func):
+    def register_scheduler(self, scheduler):
         if not self._started:
             return False
         asyncio.run_coroutine_threadsafe(
-            self._Q.put((RQ_SCHEDULER, func, time.time())),
+            self._Q.put((RQ_SCHEDULER, scheduler, time.time())),
             loop=self.event_loop)
 
-    def unregister_scheduler(self, func):
+    def unregister_scheduler(self, scheduler):
         with self.lock:
-            if func not in self.schedulers:
+            if scheduler not in self.schedulers:
                 return False
             else:
-                self.schedulers[func].cancel()
-                del self.schedulers[func]
+                self.schedulers[scheduler][1].cancel()
+                del self.schedulers[scheduler]
                 return True
 
     async def start_task(self, thread, thread_priority, time_put, delay=None):
@@ -162,9 +162,9 @@ class TaskSupervisor:
             r, res, t_put = data
             if r == RQ_SCHEDULER:
                 logger.debug('Supervisor: new scheduler {}'.format(res))
-                scheduler_task = self.event_loop.create_task(res())
+                scheduler_task = self.event_loop.create_task(res.loop())
                 with self.lock:
-                    self.schedulers[res] = scheduler_task
+                    self.schedulers[res] = (res, scheduler_task)
             elif r == RQ_TASK:
                 logger.debug('Supervisor: new task {}'.format(res))
                 target, priority, delay = res
@@ -190,12 +190,20 @@ class TaskSupervisor:
             for task in asyncio.Task.all_tasks(loop=self.event_loop):
                 task.cancel()
 
-    def stop(self, wait=True, cancel_tasks=False):
+    def _stop_schedulers(self, wait=True):
+        with self.lock:
+            schedulers = self.schedulers.copy()
+        for s in schedulers:
+            s.stop(wait=wait)
+
+    def stop(self, wait=True, stop_schedulers=True, cancel_tasks=False):
         self._active = False
-        asyncio.run_coroutine_threadsafe(
-            self._Q.put(None), loop=self.event_loop)
+        if stop_schedulers:
+            self._stop_schedulers(True if wait else False)
         if cancel_tasks:
             self._cancel_all_tasks()
+        asyncio.run_coroutine_threadsafe(
+            self._Q.put(None), loop=self.event_loop)
         if isinstance(wait, bool):
             to_wait = None
         else:

@@ -42,6 +42,8 @@ class BackgroundWorker:
         if func: self.run = func
         self._run_thread = None
         self._active = False
+        self._started = False
+        self._stopped = False
         self.daemon = kwargs.get('daemon', True)
         self.priority = kwargs.get('priority', TASK_NORMAL)
         self.o = kwargs.get('o')
@@ -81,6 +83,7 @@ class BackgroundWorker:
         self.before_start()
         self._active = True
         self._started = False
+        self._stopped = False
         kw = kwargs.copy()
         if '_priority' in kw:
             self.priority = kw['_priority']
@@ -115,6 +118,7 @@ class BackgroundWorker:
         while self._active:
             try:
                 if self.run(*args, **kwargs) is False:
+                    self.mark_stopped()
                     self.stop()
             except Exception as e:
                 self.error(e)
@@ -123,26 +127,33 @@ class BackgroundWorker:
         self._started = True
         logger.debug(self.name + ' started')
 
-    def stop(self, **kwargs):
+    def mark_stopped(self):
+        self._stopped = True
+        logger.debug(self.name + ' stopped')
+
+    def stop(self, wait=True):
         self.before_stop()
         self._active = False
         self._started = False
-        self._stop(**kwargs)
-        logger.debug(self.name + ' stopped')
+        if wait:
+            if self._run_thread:
+                try:
+                    self._run_thread.join()
+                except:
+                    pass
+            while not self._stopped:
+                time.sleep(self.poll_delay)
+        self._stop(wait=wait)
         self.after_stop()
 
     def _stop(self, **kwargs):
-        if kwargs.get('wait') and self._run_thread:
-            try:
-                self._run_thread.join()
-            except:
-                pass
+        pass
 
 
 class _BackgroundAsyncWorkerAbstract(BackgroundWorker):
 
     def _register(self):
-        self.supervisor.register_scheduler(self.loop)
+        self.supervisor.register_scheduler(self)
         while not self._started:
             time.sleep(self.poll_delay)
 
@@ -150,7 +161,7 @@ class _BackgroundAsyncWorkerAbstract(BackgroundWorker):
         self._register()
 
     def _stop(self, *args, **kwargs):
-        self.supervisor.unregister_scheduler(self.loop)
+        self.supervisor.unregister_scheduler(self)
 
     def _run(self, *args):
         try:
@@ -210,6 +221,7 @@ class BackgroundIntervalWorker(_BackgroundAsyncWorkerAbstract):
                 tts = self.delay
             if tts > 0:
                 await asyncio.sleep(tts)
+        self.mark_stopped()
 
 
 class BackgroundQueueWorker(_BackgroundAsyncWorkerAbstract):
@@ -235,15 +247,17 @@ class BackgroundQueueWorker(_BackgroundAsyncWorkerAbstract):
             task = await self._Q.get()
             if self._active and task is not None:
                 if not self.launch_run_task(task):
+                    self.mark_stopped()
                     break
             else:
+                self.mark_stopped()
                 break
             await asyncio.sleep(self.supervisor.poll_delay)
 
     def get_queue_obj(self):
         return self._Q
 
-    def after_stop(self):
+    def before_stop(self):
         try:
             self.put(None)
         except:
@@ -268,13 +282,14 @@ class BackgroundEventWorker(_BackgroundAsyncWorkerAbstract):
             await self._E.wait()
             self._E.clear()
             if not self._active or not self.launch_run_task():
+                self.mark_stopped()
                 break
             await asyncio.sleep(self.supervisor.poll_delay)
 
     def get_event_obj(self):
         return self._E
 
-    def after_stop(self):
+    def before_stop(self):
         try:
             self.trigger()
         except:
