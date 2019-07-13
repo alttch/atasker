@@ -58,11 +58,11 @@ class TaskSupervisor:
         else:
             return False
 
-    def put_task(self, thread, priority):
+    def put_task(self, thread, priority=TASK_LOW, delay=None):
         if not self._started:
             return False
         asyncio.run_coroutine_threadsafe(
-            self._Q.put((RQ_TASK, (thread, priority), time.time())),
+            self._Q.put((RQ_TASK, (thread, priority, delay), time.time())),
             loop=self.event_loop)
         return True
 
@@ -82,7 +82,7 @@ class TaskSupervisor:
                 del self.schedulers[func]
                 return True
 
-    async def start_task(self, thread, thread_priority, time_put):
+    async def start_task(self, thread, thread_priority, time_put, delay=None):
         if not self._active: return
         self.lock.acquire()
         try:
@@ -103,7 +103,12 @@ class TaskSupervisor:
             logger.debug('new task {} pool size: {} / {}'.format(
                 thread, len(self._active_threads), self.pool_size))
         finally:
-            self.lock.release()
+            try:
+                self.lock.release()
+            except:
+                pass
+        if delay:
+            await asyncio.sleep(delay)
         thread.start()
         time_started = time.time()
         time_spent = time_started - time_put
@@ -144,6 +149,10 @@ class TaskSupervisor:
         while not self._started:
             time.sleep(self.poll_delay)
 
+    def block(self):
+        while self._active:
+            time.sleep(0.1)
+
     async def main_loop(self):
         self._Q = asyncio.queues.Queue()
         logger.info('supervisor event loop started')
@@ -158,9 +167,9 @@ class TaskSupervisor:
                     self.schedulers[res] = scheduler_task
             elif r == RQ_TASK:
                 logger.debug('Supervisor: new task {}'.format(res))
-                target, priority = res
+                target, priority, delay = res
                 self.event_loop.create_task(
-                    self.start_task(target, priority, t_put))
+                    self.start_task(target, priority, t_put, delay))
         logger.info('supervisor event loop finished')
 
     def start_event_loop(self):

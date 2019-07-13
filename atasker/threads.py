@@ -4,6 +4,7 @@ __license__ = "Apache License 2.0"
 __version__ = "0.0.1"
 
 import threading
+import time
 
 from functools import wraps
 
@@ -38,7 +39,8 @@ def background_task(f, *args, **kwargs):
             args=(f,),
             kwargs=kw)
         if kwargs.get('daemon'): t.setDaemon(True)
-        task_supervisor.put_task(t, kwargs.get('priority', TASK_NORMAL))
+        task_supervisor.put_task(
+            t, kwargs.get('priority', TASK_NORMAL), kwargs.get('delay'))
         return t
 
     return start_task
