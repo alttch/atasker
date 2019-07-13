@@ -36,7 +36,7 @@ def background_task(f, *args, **kwargs):
             group=kwargs.get('group'),
             target=_background_task_runner,
             name=kwargs.get('name'),
-            args=(f,),
+            args=(f,) + args,
             kwargs=kw)
         if kwargs.get('daemon'): t.setDaemon(True)
         task_supervisor.put_task(
