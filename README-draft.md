@@ -94,4 +94,7 @@ class MyWorker(BackgroundIntervalWorker):
 
     def run(self, **kwargs):
         print('I am custom worker class')
+
+worker5 = MyWorker(interval=0.1, name='worker5')
+worker5.start()
 ```

@@ -61,7 +61,7 @@ class BackgroundWorker:
                                                uuid.uuid4())
 
     def restart(self, *args, **kwargs):
-        self.stop()
+        self.stop(wait=kwargs.get('wait'))
         self.start(*args, **kwargs)
 
     def is_active(self):
