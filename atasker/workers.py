@@ -132,6 +132,7 @@ class BackgroundWorker:
             except Exception as e:
                 self.error(e)
         self.mark_stopped()
+        self.supervisor.mark_task_completed()
 
     def mark_started(self):
         self._started = True
@@ -178,12 +179,15 @@ class _BackgroundAsyncWorkerAbstract(BackgroundWorker):
 
     def _run(self, *args):
         try:
-            if self.run(*(args + self.thread_args), **self.thread_kw) is False:
-                self._abort()
-        except Exception as e:
-            self.error(e)
-        self.supervisor.mark_task_completed()
-        self._run_thread = None
+            try:
+                if self.run(*(args + self.thread_args), **
+                            self.thread_kw) is False:
+                    self._abort()
+            except Exception as e:
+                self.error(e)
+        finally:
+            self.supervisor.mark_task_completed()
+            self._run_thread = None
 
     def launch_run_task(self, *args, **kwargs):
         t = threading.Thread(

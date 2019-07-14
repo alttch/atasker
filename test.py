@@ -57,14 +57,15 @@ def myeventworker(**kwargs):
     # time.sleep(1)
 
 
-task_supervisor.set_config(pool_size=2, reserve_normal=0, reserve_high=0)
+task_supervisor.set_config(pool_size=0, reserve_normal=0, reserve_high=0)
 task_supervisor.poll_delay = 0.01
 task_supervisor.start()
 
 f = TaskCollection()
 
 
-def test(x):
+def test(x=None):
+    raise
     print(x)
     print('job ttt: test')
     # time.sleep(1)
@@ -100,28 +101,35 @@ def someworker(**kwargs):
     time.sleep(0.5)
     # return False
 
+class W2(atasker.BackgroundIntervalWorker):
+
+    def run(self, **kwargs):
+        print(self)
+
 # print(f())
 # time.sleep(1)
 # task_supervisor.stop(wait=2)
 # exit()
-myworker.start(123,x=2)
+# myworker.start(123,x=2)
 myqueuedworker.start()
 myeventworker.start()
-someworker.start()
-# myqueuedworker.put('task1')
+# someworker.start()
+w2=W2(interval=1, name='w2')
+w2.start()
+myqueuedworker.put('task1')
 # myevent.set()
 # time.sleep(2)
-myqueuedworker.put('task2')
-myqueuedworker.put('task3')
+# myqueuedworker.put('task2')
+# myqueuedworker.put('task3')
 # myqueuedworker.put('task4')
 # for i in range(100):
 # myqueuedworker.put(i)
 # myevent.set()
 myeventworker.trigger()
-# myeventworker.trigger()
-# myeventworker.trigger()
+myeventworker.trigger()
+myeventworker.trigger()
 # myeventworker.restart()
-# myeventworker.trigger()
+myeventworker.trigger()
 # myeventworker.trigger()
 # time.sleep(1)
 # myeventworker.trigger()
@@ -137,10 +145,10 @@ myeventworker.trigger()
 # background_task(
 # test, name='ttt', wait_start=True, priority=atasker.TASK_CRITICAL)()
 # time.sleep(2)
-# background_task(test, name='ttt', wait_start=True)()
-# background_task(test, name='ttt', wait_start=True)()
-# background_task(test, name='ttt', wait_start=True)()
-# background_task(test, name='ttt', wait_start=True)()
+background_task(test, name='ttt', wait_start=True)()
+background_task(test, name='ttt', wait_start=True)()
+background_task(test, name='ttt', wait_start=True)()
+background_task(test, name='ttt', wait_start=True)()
 # for i in range(100):
 # t = threading.Thread(target=ttt)
 # t.start()
@@ -151,9 +159,9 @@ myeventworker.trigger()
 print('waiting...')
 time.sleep(1)
 # myworker.stop(wait=True)
-# someworker.stop(wait=True)
-print('worker stopped')
-time.sleep(2)
+someworker.stop(wait=True)
+# print('worker stopped')
+time.sleep(10)
 # task_supervisor.block()
-task_supervisor.stop(wait=2)
+task_supervisor.stop(wait=True)
 # print(c)

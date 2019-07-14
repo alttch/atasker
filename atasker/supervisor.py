@@ -34,6 +34,7 @@ class TaskSupervisor:
 
         self._active_threads = set()
         self._active = False
+        self._main_loop_active = False
         self._started = False
         self.lock = threading.Lock()
         self.poll_delay = poll_delay
@@ -100,7 +101,7 @@ class TaskSupervisor:
         if not self._active: return
         self.lock.acquire()
         try:
-            if thread_priority != TASK_CRITICAL:
+            if thread_priority != TASK_CRITICAL and self.pool_size:
                 self.queue[thread_priority].append(thread)
                 while self._active and \
                         (len(self._active_threads) >= \
@@ -143,7 +144,7 @@ class TaskSupervisor:
                 task = threading.current_thread()
             if task in self._active_threads:
                 self._active_threads.remove(task)
-                logger.debug('removed thread {} pool size: {} / {}'.format(
+                logger.debug('removed task {} pool size: {} / {}'.format(
                     task, len(self._active_threads), self.pool_size))
         return True
 
@@ -158,8 +159,9 @@ class TaskSupervisor:
 
     def start(self):
         self._active = True
+        self._main_loop_active = True
         t = threading.Thread(
-            name='supervisor_event_loop', target=self.start_event_loop)
+            name='supervisor_event_loop', target=self._start_event_loop)
         t.start()
         while not self._started:
             time.sleep(self.poll_delay)
@@ -171,7 +173,7 @@ class TaskSupervisor:
     async def main_loop(self):
         self._Q = asyncio.queues.Queue()
         logger.info('supervisor event loop started')
-        while self._active:
+        while self._main_loop_active:
             data = await self._Q.get()
             if data is None: break
             r, res, t_put = data
@@ -187,7 +189,7 @@ class TaskSupervisor:
                     self.start_task(target, priority, t_put, delay))
         logger.info('supervisor event loop finished')
 
-    def start_event_loop(self):
+    def _start_event_loop(self):
         if self._active:
             self.event_loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.event_loop)
@@ -215,29 +217,41 @@ class TaskSupervisor:
         self._active = False
         if stop_schedulers:
             self._stop_schedulers(True if wait else False)
+            logger.debug('schedulers stopped')
         if cancel_tasks:
             self._cancel_all_tasks()
-        asyncio.run_coroutine_threadsafe(
-            self._Q.put(None), loop=self.event_loop)
+            logger.debug('remaining tasks canceled')
         if isinstance(wait, bool):
             to_wait = None
         else:
             to_wait = time.time() + wait
         if wait is True or to_wait:
-            logger.debug('stopping event loop, waiting for tasks to finish')
+            logger.debug('waiting for tasks to finish')
             while True:
-                can_break = True
-                if self._active_threads:
+                if not self._active_threads:
+                    break
+                if to_wait and time.time() > to_wait:
+                    logger.warning(
+                        'wait timeout, skipping, hope threads will finish')
+                    break
+                time.sleep(self.poll_delay)
+        logger.debug('stopping event loop')
+        self._main_loop_active = False
+        asyncio.run_coroutine_threadsafe(
+            self._Q.put(None), loop=self.event_loop)
+        if wait is True or to_wait:
+            while True:
+                if to_wait and time.time() > to_wait:
+                    logger.warning('wait timeout, canceling all tasks')
+                    self._cancel_all_tasks()
+                    break
+                else:
                     can_break = True
-                if can_break:
-                    if to_wait and time.time() > to_wait:
-                        logger.warning('wait timeout, canceling all tasks')
-                        self._cancel_all_tasks()
-                    else:
-                        for t in asyncio.Task.all_tasks(self.event_loop):
-                            if not t.cancelled() and not t.done():
-                                can_break = False
-                if can_break: break
+                    for t in asyncio.Task.all_tasks(self.event_loop):
+                        if not t.cancelled() and not t.done():
+                            can_break = False
+                            break
+                    if can_break: break
                 time.sleep(self.poll_delay)
         self._started = False
         logger.info('supervisor stopped')

@@ -59,7 +59,39 @@ def mytask2():
 background_task(mytask2, priority=TASK_HIGH)()
 ```
 
-### Workers
+### Worker examples
 
-* **BackgroundWorker** - worker loop starts in a separated thread and loops
-worker function until stopped
+```python
+from atasker import background_worker, TASK_HIGH
+
+@background_worker
+def worker1(**kwargs):
+    print('I am a simple background worker')
+
+@background_worker(interval=1)
+def worker2(**kwargs):
+    print('I run every second!')
+
+@background_worker(queue=True)
+def worker3(task, **kwargs):
+    print('I run when there is a task in my queue')
+
+@background_worker(event=True, priority=TASK_HIGH)
+def worker4(**kwargs):
+    print('I run when triggered with high priority')
+
+worker1.start()
+worker2.start()
+worker3.start()
+worker4.start()
+
+worker3.put('todo1')
+worker4.trigger()
+
+from atasker import BackgroundIntervalWorker
+
+class MyWorker(BackgroundIntervalWorker):
+
+    def run(self, **kwargs):
+        print('I am custom worker class')
+```

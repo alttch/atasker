@@ -47,5 +47,7 @@ def background_task(f, *args, **kwargs):
 
 
 def _background_task_runner(f, *args, **kwargs):
-    f(*args, **kwargs)
-    task_supervisor.mark_task_completed()
+    try:
+        f(*args, **kwargs)
+    finally:
+        task_supervisor.mark_task_completed()
