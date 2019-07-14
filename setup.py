@@ -2,8 +2,9 @@ __version__ = "0.0.1"
 
 import setuptools
 
-with open('README.md', 'r') as fh:
-    long_description = fh.read()
+# with open('README.md', 'r') as fh:
+    # long_description = fh.read()
+long_description = ''
 
 setuptools.setup(
     name='atasker',
