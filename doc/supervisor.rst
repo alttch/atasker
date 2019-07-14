@@ -85,11 +85,11 @@ Stopping task supervisor
 
 Params:
 
-* **wait** wait until tasks and scheduler coroutines finish. If **wait=int**,
-  task supervisor will wait until coroutines finish for the max. *wait*
-  seconds. However if requested to stop schedulers (workers) or task threads
-  are currently running, method *stop* wait until they finish for the unlimited
-  time.
+* **wait** wait until tasks and scheduler coroutines finish. If
+  **wait=<number>**, task supervisor will wait until coroutines finish for the
+  max. *wait* seconds. However if requested to stop schedulers (workers) or
+  task threads are currently running, method *stop* wait until they finish for
+  the unlimited time.
 
 * **stop_schedulers** before stopping the main event loop, task scheduler will
   call *stop* method of all schedulers running.
