@@ -24,10 +24,12 @@ all their public methods are thread-safe.
 
 ## Why not standard Python thread pool?
 
-The answer is simple:
-
 * threads in a standard pool don't have priorities
 * workers
+
+## Why not standard asyncio loops?
+
+* async workers
 
 ## Code examples
 
@@ -78,6 +80,10 @@ from atasker import background_worker, TASK_HIGH
 def worker1(**kwargs):
     print('I am a simple background worker')
 
+@background_worker
+async def worker_async(**kwargs):
+    print('I am async background worker')
+
 @background_worker(interval=1)
 def worker2(**kwargs):
     print('I run every second!')
@@ -91,6 +97,7 @@ def worker4(**kwargs):
     print('I run when triggered with high priority')
 
 worker1.start()
+worker_async.start()
 worker2.start()
 worker3.start()
 worker4.start()

@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, http://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 from atasker.supervisor import TaskSupervisor
 from atasker.supervisor import TASK_LOW
