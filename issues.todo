@@ -1,0 +1,2 @@
+- [ ] stop async workers - mark stopped
+- [ ] task_start - test stop on small polls
