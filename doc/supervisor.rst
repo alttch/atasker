@@ -19,6 +19,10 @@ created.
     task_supervisor.set_config(pool_size=20, reserve_normal=5, reserve_high=5)
     task_supervisor.start()
 
+.. warning::
+
+    Task supervisor must be started before any scheduler/worker or task.
+
 .. _priorities:
 
 Task priorities
