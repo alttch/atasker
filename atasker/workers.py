@@ -236,6 +236,8 @@ class BackgroundIntervalWorker(_BackgroundAsyncWorkerAbstract):
                 tts = self.delay + tstart - time.time()
             else:
                 tts = self.delay
+                while self._run_thread:
+                    await asyncio.sleep(self.poll_delay)
             if tts > 0:
                 await asyncio.sleep(tts)
         self.mark_stopped()
