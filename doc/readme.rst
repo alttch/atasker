@@ -1,8 +1,8 @@
 atasker
 =======
 
-Python library for modern thread polling and task processing using
-asyncio
+Python library for modern thread pooling and task processing using
+asyncio.
 
 Install
 -------
