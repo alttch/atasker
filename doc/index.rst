@@ -5,3 +5,4 @@
 
     supervisor
     tasks
+    workers

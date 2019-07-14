@@ -38,8 +38,8 @@ class BackgroundWorker:
 
     # -----------------------
 
-    def __init__(self, name=None, func=None, **kwargs):
-        if func: self.run = func
+    def __init__(self, worker_name=None, executor_func=None, **kwargs):
+        if executor_func: self.run = executor_func
         self._executor_thread = None
         self._active = False
         self._started = False
@@ -51,7 +51,7 @@ class BackgroundWorker:
         self.on_error_kwargs = kwargs.get('on_error_kwargs', {})
         self.supervisor = kwargs.get('supervisor', task_supervisor)
         self.poll_delay = kwargs.get('poll_delay', self.supervisor.poll_delay)
-        self.set_name(name)
+        self.set_name(worker_name)
         self.thread_args = ()
         self.thread_kw = {}
         self.start_stop_lock = threading.Lock()

@@ -4,6 +4,8 @@ Task supervisor
 Task supervisor is a component which manages task thread pool and run task
 :doc:`schedulers (workers)<workers>`.
 
+.. contents::
+
 Usage
 =====
 
@@ -64,6 +66,20 @@ busy task pool is, and the pool is being extended for them with no limits.
 
     pool size can be changed while task supervisor is running.
 
+Poll delay
+==========
+
+Poll delay is a delay (in seconds), which is used by task queue manager, in
+:doc:`workers<workers>` and some other methods like *start/stop*.
+
+Lower poll delay = higher CPU usage, higher poll delay = faster reaction time.
+
+Default poll delay is 0.1 second. Can be changed with:
+
+.. code:: python
+
+    task_supervisor.poll_delay = 0.01 # set poll delay to 10ms
+
 Blocking
 ========
 
@@ -75,6 +91,27 @@ thread, you may use method
     task_supervisor.block()
 
 which will just sleep until task supervisor is active.
+
+Timeouts
+========
+
+Task supervisor can log timeouts (when task isn't launched within a specified
+number of seconds) and run timeout handler functions:
+
+.. code:: python
+
+    def warning(t):
+        # t = task thread object
+        print('Task thread {} is not launched yet'.format(t))
+
+    def critical(t):
+        print('All is worse than expected')
+
+    task_supervisor.timeout_warning = 5
+    task_supervisor.timeout_warning_func = warn
+    task_supervisor.timeout_critical = 10
+    task_supervisor.timeout_critical_func = critical
+
 
 Stopping task supervisor
 ========================
@@ -156,3 +193,5 @@ Own task scheduler (worker) can be registered in task supervisor with:
 
 Where *scheduler* = scheduler object, which should implement at least *stop*
 (regular) and *loop* (async) methods.
+
+

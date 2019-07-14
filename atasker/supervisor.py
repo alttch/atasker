@@ -32,30 +32,32 @@ class TaskSupervisor:
                  reserve_high=5,
                  poll_delay=0.1):
 
-        self._active_threads = set()
-        self._active = False
-        self._main_loop_active = False
-        self._started = False
-        self.lock = threading.Lock()
         self.poll_delay = poll_delay
-        self.max_threads = {}
-        self.schedulers = {}
-        self.queue = {TASK_LOW: [], TASK_NORMAL: [], TASK_HIGH: []}
-        self.set_config(
-            pool_size=pool_size,
-            reserve_normal=reserve_normal,
-            reserve_high=reserve_high)
         self.timeout_warning = 5
         self.timeout_warning_func = None
         self.timeout_critical = 10
         self.timeout_critical_func = None
 
+        self._active_threads = set()
+        self._active = False
+        self._main_loop_active = False
+        self._started = False
+        self._lock = threading.Lock()
+        self._max_threads = {}
+        self._schedulers = {}
+        self._queue = {TASK_LOW: [], TASK_NORMAL: [], TASK_HIGH: []}
+
+        self.set_config(
+            pool_size=pool_size,
+            reserve_normal=reserve_normal,
+            reserve_high=reserve_high)
+
     def _higher_queues_busy(self, task_priority):
         if task_priority == TASK_NORMAL:
-            return len(self.queue[TASK_HIGH]) > 0
+            return len(self._queue[TASK_HIGH]) > 0
         elif task_priority == TASK_LOW:
-            return len(self.queue[TASK_NORMAL]) > 0 or \
-                    len(self.queue[TASK_HIGH]) > 0
+            return len(self._queue[TASK_NORMAL]) > 0 or \
+                    len(self._queue[TASK_HIGH]) > 0
         else:
             return False
 
@@ -76,42 +78,42 @@ class TaskSupervisor:
         return True
 
     def register_sync_scheduler(self, scheduler):
-        with self.lock:
-            self.schedulers[scheduler] = None
+        with self._lock:
+            self._schedulers[scheduler] = None
         return True
 
     def unregister_sync_scheduler(self, scheduler):
-        with self.lock:
+        with self._lock:
             try:
-                del self.schedulers[scheduler]
+                del self._schedulers[scheduler]
                 return True
             except:
                 return False
 
     def unregister_scheduler(self, scheduler):
-        with self.lock:
-            if scheduler not in self.schedulers:
+        with self._lock:
+            if scheduler not in self._schedulers:
                 return False
             else:
-                self.schedulers[scheduler][1].cancel()
-                del self.schedulers[scheduler]
+                self._schedulers[scheduler][1].cancel()
+                del self._schedulers[scheduler]
                 return True
 
     async def start_task(self, thread, thread_priority, time_put, delay=None):
         if not self._active: return
-        self.lock.acquire()
+        self._lock.acquire()
         try:
             if thread_priority != TASK_CRITICAL and self.pool_size:
-                self.queue[thread_priority].append(thread)
+                self._queue[thread_priority].append(thread)
                 while self._active and \
                         (len(self._active_threads) >= \
-                                self.max_threads[thread_priority] \
-                            or self.queue[thread_priority][0] != thread or \
+                                self._max_threads[thread_priority] \
+                            or self._queue[thread_priority][0] != thread or \
                             self._higher_queues_busy(thread_priority)):
-                    self.lock.release()
+                    self._lock.release()
                     await asyncio.sleep(self.poll_delay)
-                    self.lock.acquire()
-                self.queue[thread_priority].pop(0)
+                    self._lock.acquire()
+                self._queue[thread_priority].pop(0)
                 if not self._active:
                     return
             self._active_threads.add(thread)
@@ -119,7 +121,7 @@ class TaskSupervisor:
                 thread, len(self._active_threads), self.pool_size))
         finally:
             try:
-                self.lock.release()
+                self._lock.release()
             except:
                 pass
         if delay:
@@ -139,7 +141,7 @@ class TaskSupervisor:
         thread.time_started = time_started
 
     def mark_task_completed(self, task=None):
-        with self.lock:
+        with self._lock:
             if task is None:
                 task = threading.current_thread()
             if task in self._active_threads:
@@ -152,9 +154,9 @@ class TaskSupervisor:
         for p in ['pool_size', 'reserve_normal', 'reserve_high']:
             if p in kwargs:
                 setattr(self, p, int(kwargs[p]))
-        self.max_threads[TASK_LOW] = self.pool_size
-        self.max_threads[TASK_NORMAL] = self.pool_size + self.reserve_normal
-        self.max_threads[TASK_HIGH] = self.pool_size + \
+        self._max_threads[TASK_LOW] = self.pool_size
+        self._max_threads[TASK_NORMAL] = self.pool_size + self.reserve_normal
+        self._max_threads[TASK_HIGH] = self.pool_size + \
                 self.reserve_normal + self.reserve_high
 
     def start(self):
@@ -180,8 +182,8 @@ class TaskSupervisor:
             if r == RQ_SCHEDULER:
                 logger.debug('Supervisor: new scheduler {}'.format(res))
                 scheduler_task = self.event_loop.create_task(res.loop())
-                with self.lock:
-                    self.schedulers[res] = (res, scheduler_task)
+                with self._lock:
+                    self._schedulers[res] = (res, scheduler_task)
             elif r == RQ_TASK:
                 logger.debug('Supervisor: new task {}'.format(res))
                 target, priority, delay = res
@@ -203,13 +205,13 @@ class TaskSupervisor:
                 logger.warning('supervisor loop had active tasks')
 
     def _cancel_all_tasks(self):
-        with self.lock:
+        with self._lock:
             for task in asyncio.Task.all_tasks(loop=self.event_loop):
                 task.cancel()
 
     def _stop_schedulers(self, wait=True):
-        with self.lock:
-            schedulers = self.schedulers.copy()
+        with self._lock:
+            schedulers = self._schedulers.copy()
         for s in schedulers:
             s.stop(wait=wait)
 
