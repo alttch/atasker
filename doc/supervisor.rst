@@ -22,7 +22,7 @@ created.
 Task priorities
 ===============
 
-Pool supervisor supports 4 task priorities:
+Task supervisor supports 4 task priorities:
 
 * TASK_LOW
 * TASK_NORMAL (default)
