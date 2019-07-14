@@ -1,6 +1,16 @@
 # atasker
 Python library for modern thread polling and task processing using asyncio
 
+# Install
+
+```bash
+pip3 install atasker
+```
+
+Sources: https://github.com/alttch/atasker
+
+Documentation: https://atasker.readthedocs.io/
+
 ## Why
 
 * asynchronous programming is a perfect way to make your code fast and reliable
@@ -9,8 +19,8 @@ Python library for modern thread polling and task processing using asyncio
   background
 
 **atasker** combines advantages of both ways: atasker tasks run in separate
-threads however task supervisor and workers are completely asynchronous and all
-their methods are thread-safe.
+threads however task supervisor and workers are completely asynchronous. But
+all their public methods are thread-safe.
 
 ## Why not standard Python thread pool?
 
