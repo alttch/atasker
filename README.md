@@ -1,7 +1,7 @@
 # atasker
 Python library for modern thread polling and task processing using asyncio
 
-# Install
+## Install
 
 ```bash
 pip3 install atasker
@@ -56,13 +56,13 @@ task_supervisor.stop()
 from atasker import background task, TASK_LOW, TASK_HIGH
 
 # with annotation
-@background_task(priority=TASK_LOW)
+@background_task
 def mytask():
     print('I am working in the background!')
 
 mytask()
 
-# for manual decoration
+# with manual decoration
 def mytask2():
     print('I am working in the background too!')
 

@@ -24,5 +24,4 @@ from atasker.f import TaskCollection
 from atasker.threads import LocalProxy
 from atasker.threads import background_task
 
-
 g = LocalProxy()

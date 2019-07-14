@@ -50,7 +50,7 @@ class TaskSupervisor:
         self.timeout_critical = 10
         self.timeout_critical_func = None
 
-    def higher_queues_busy(self, task_priority):
+    def _higher_queues_busy(self, task_priority):
         if task_priority == TASK_NORMAL:
             return len(self.queue[TASK_HIGH]) > 0
         elif task_priority == TASK_LOW:
@@ -59,7 +59,7 @@ class TaskSupervisor:
         else:
             return False
 
-    def put_task(self, thread, priority=TASK_LOW, delay=None):
+    def put_task(self, thread, priority=TASK_NORMAL, delay=None):
         if not self._started:
             return False
         asyncio.run_coroutine_threadsafe(
@@ -107,7 +107,7 @@ class TaskSupervisor:
                         (len(self._active_threads) >= \
                                 self.max_threads[thread_priority] \
                             or self.queue[thread_priority][0] != thread or \
-                            self.higher_queues_busy(thread_priority)):
+                            self._higher_queues_busy(thread_priority)):
                     self.lock.release()
                     await asyncio.sleep(self.poll_delay)
                     self.lock.acquire()
@@ -170,7 +170,7 @@ class TaskSupervisor:
         while self._active:
             time.sleep(0.1)
 
-    async def main_loop(self):
+    async def _main_loop(self):
         self._Q = asyncio.queues.Queue()
         logger.info('supervisor event loop started')
         while self._main_loop_active:
@@ -198,7 +198,7 @@ class TaskSupervisor:
                     self.pool_size, self.reserve_normal, self.reserve_high))
             try:
                 self._started = True
-                self.event_loop.run_until_complete(self.main_loop())
+                self.event_loop.run_until_complete(self._main_loop())
             except CancelledError:
                 logger.warning('supervisor loop had active tasks')
 

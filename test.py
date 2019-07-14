@@ -65,11 +65,10 @@ task_supervisor.start()
 f = TaskCollection()
 
 
-def test(x=None):
-    raise
-    print(x)
-    print('job ttt: test')
-    # time.sleep(1)
+#@background_task
+def test(*args, **kwargs):
+    print('job ttt: test', args, kwargs)
+    # time.sleep(3)
 
 
 @f(priority=atasker.TASK_CRITICAL)
@@ -111,7 +110,7 @@ class W2(atasker.BackgroundIntervalWorker):
 # time.sleep(1)
 # task_supervisor.stop(wait=2)
 # exit()
-myworker.start(123,x=2)
+# myworker.start(123,x=2)
 # myqueuedworker.start()
 # myeventworker.start()
 # someworker.start()
@@ -139,18 +138,19 @@ myworker.start(123,x=2)
 # time.sleep(0.1)
 # myworker.stop()
 # myworker.start()
-# background_task(
-# test, name='ttt', wait_start=True, priority=atasker.TASK_CRITICAL)()
-# background_task(test, name='ttt', wait_start=True)(1)
-# background_task(test, name='ttt', wait_start=True)()
+background_task(test, name='ttt', priority=atasker.TASK_CRITICAL)()
+# background_task(test, name='ttt', priority=atasker.TASK_HIGH)(1,a=2)
+# test()
+# test(1, a=2)
+# background_task(test, name='ttt')()
 # time.sleep(0.01)
 # background_task(
-# test, name='ttt', wait_start=True, priority=atasker.TASK_CRITICAL)()
+# test, name='ttt', priority=atasker.TASK_CRITICAL)()
 # time.sleep(2)
-# background_task(test, name='ttt', wait_start=True)()
-# background_task(test, name='ttt', wait_start=True)()
-# background_task(test, name='ttt', wait_start=True)()
-# background_task(test, name='ttt', wait_start=True)()
+# background_task(test, name='ttt')()
+# background_task(test, name='ttt')()
+# background_task(test, name='ttt')()
+# background_task(test, name='ttt')()
 # for i in range(100):
 # t = threading.Thread(target=ttt)
 # t.start()
