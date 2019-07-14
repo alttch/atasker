@@ -72,6 +72,20 @@ class TaskSupervisor:
         asyncio.run_coroutine_threadsafe(
             self._Q.put((RQ_SCHEDULER, scheduler, time.time())),
             loop=self.event_loop)
+        return True
+
+    def register_sync_scheduler(self, scheduler):
+        with self.lock:
+            self.schedulers[scheduler] = None
+        return True
+
+    def unregister_sync_scheduler(self, scheduler):
+        with self.lock:
+            try:
+                del self.schedulers[scheduler]
+                return True
+            except:
+                return False
 
     def unregister_scheduler(self, scheduler):
         with self.lock:
@@ -109,7 +123,8 @@ class TaskSupervisor:
                 pass
         if delay:
             await asyncio.sleep(delay)
-        thread.start()
+        if self._active:
+            thread.start()
         time_started = time.time()
         time_spent = time_started - time_put
         if time_spent > self.timeout_critical:
