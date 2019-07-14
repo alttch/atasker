@@ -104,8 +104,13 @@ Custom task supervisor
 
     from atasker import TaskSupervisor
 
+    my_supervisor = TaskSupervisor(
+        pool_size=100, reserve_normal=10, reserve_high=10)
+
     class MyTaskSupervisor(TaskSupervisor):
         # .......
+
+    my_supervisor2 = MyTaskSupervisor()
 
 Putting own threads
 ===================
