@@ -54,6 +54,7 @@ class BackgroundWorker:
         self.set_name(name)
         self.thread_args = ()
         self.thread_kw = {}
+        self.start_stop_lock = threading.Lock()
 
     def set_name(self, name):
         self.name = '_background_worker_%s' % (name if name is not None else
@@ -80,26 +81,30 @@ class BackgroundWorker:
     def start(self, *args, **kwargs):
         if self._active:
             return False
-        self.before_start()
-        self._active = True
-        self._started = False
-        self._stopped = True
-        kw = kwargs.copy()
-        if '_priority' in kw:
-            self.priority = kw['_priority']
-        kw['_worker'] = self
-        self.daemon = kwargs.get('daemon', True)
-        if not '_worker_name' in kw:
-            kw['_worker_name'] = self.name
-        if not 'o' in kw:
-            kw['o'] = self.o
-        self.thread_args = args
-        self.thread_kw = kw
-        self._start()
-        while not self._started:
-            time.sleep(self.poll_delay)
-        self.after_start()
-        return True
+        self.start_stop_lock.acquire()
+        try:
+            self.before_start()
+            self._active = True
+            self._started = False
+            self._stopped = False
+            kw = kwargs.copy()
+            if '_priority' in kw:
+                self.priority = kw['_priority']
+            kw['_worker'] = self
+            self.daemon = kwargs.get('daemon', True)
+            if not '_worker_name' in kw:
+                kw['_worker_name'] = self.name
+            if not 'o' in kw:
+                kw['o'] = self.o
+            self.thread_args = args
+            self.thread_kw = kw
+            self._start()
+            while not self._started:
+                time.sleep(self.poll_delay)
+            self.after_start()
+            return True
+        finally:
+            self.start_stop_lock.release()
 
     def _start(self, *args, **kwargs):
         t = threading.Thread(
@@ -137,18 +142,22 @@ class BackgroundWorker:
         logger.debug(self.name + ' stopped')
 
     def stop(self, wait=True):
-        self.before_stop()
-        self._active = False
-        if wait:
-            if self._run_thread:
-                try:
-                    self._run_thread.join()
-                except:
-                    pass
-            while not self._stopped:
-                time.sleep(self.poll_delay)
-        self._stop(wait=wait)
-        self.after_stop()
+        self.start_stop_lock.acquire()
+        try:
+            self.before_stop()
+            self._active = False
+            if wait:
+                if self._run_thread:
+                    try:
+                        self._run_thread.join()
+                    except:
+                        pass
+                while not self._stopped:
+                    time.sleep(self.poll_delay)
+            self._stop(wait=wait)
+            self.after_stop()
+        finally:
+            self.start_stop_lock.release()
 
     def _stop(self, **kwargs):
         self.supervisor.unregister_sync_scheduler(self)

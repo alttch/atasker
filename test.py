@@ -12,8 +12,8 @@ import atasker
 
 logging.basicConfig(level=logging.DEBUG)
 
-# logging.getLogger('atasker/workers').setLevel(logging.DEBUG)
-# logging.getLogger('atasker/supervisor').setLevel(logging.DEBUG)
+logging.getLogger('atasker/workers').setLevel(logging.DEBUG)
+logging.getLogger('atasker/supervisor').setLevel(logging.DEBUG)
 
 import threading
 
@@ -26,7 +26,7 @@ Q = Queue()
 c = 0
 
 
-@background_worker(interval=1)
+@background_worker(interval=0.1)
 def myworker(*args, **kwargs):
     global c
     print('worker is running')
@@ -87,12 +87,12 @@ def ttt():
     q = queue.Queue()
     q.get()
 
-def stop():
-    print('STOPPING')
+# def stop():
+    # print('STOPPING')
     # print('stopping supervisor')
     # myworker.stop(wait=True)
     # return
-    task_supervisor.stop(wait=2)
+    # task_supervisor.stop(wait=2)
 
 @background_worker
 def someworker(**kwargs):
@@ -111,13 +111,13 @@ someworker.start()
 # myqueuedworker.put('task1')
 # myevent.set()
 # time.sleep(2)
-# myqueuedworker.put('task2')
-# myqueuedworker.put('task3')
+myqueuedworker.put('task2')
+myqueuedworker.put('task3')
 # myqueuedworker.put('task4')
 # for i in range(100):
 # myqueuedworker.put(i)
 # myevent.set()
-# myeventworker.trigger()
+myeventworker.trigger()
 # myeventworker.trigger()
 # myeventworker.trigger()
 # myeventworker.restart()
@@ -146,9 +146,14 @@ someworker.start()
 # t.start()
 # x = atasker.BackgroundQueueWorker()
 # x.start()
-print('xxx')
-background_task(stop, delay=1, priority=atasker.TASK_CRITICAL)()
+# print('xxx')
+# background_task(stop, delay=1, priority=atasker.TASK_CRITICAL)()
 print('waiting...')
-task_supervisor.block()
-# task_supervisor.stop(wait=2)
+time.sleep(1)
+# myworker.stop(wait=True)
+# someworker.stop(wait=True)
+print('worker stopped')
+time.sleep(2)
+# task_supervisor.block()
+task_supervisor.stop(wait=2)
 # print(c)
