@@ -1,6 +1,10 @@
 import time
 import logging
 
+import asyncio
+
+loop = asyncio.get_event_loop()
+
 from atasker import background_worker
 from atasker import background_task
 from atasker import task_supervisor
@@ -25,26 +29,31 @@ Q = Queue()
 
 c = 0
 
+task_supervisor.set_config(pool_size=0, reserve_normal=0, reserve_high=0)
+task_supervisor.poll_delay = 0.01
+task_supervisor.start()
 
-@background_worker(delay=1)
-def myworker(*args, **kwargs):
+f = TaskCollection()
+
+
+@background_worker
+async def myworker(*args, **kwargs):
     global c
     print('worker is running')
     print(args)
     print(kwargs)
     c += 1
-    time.sleep(1)
+    # time.sleep(0.1)
     # print(c)
     # return False
-
-
-import asyncio
 
 
 def e(*args, **kwargs):
     print(kwargs['e'])
 
+
 import asyncio
+
 
 @background_worker(q=asyncio.queues.PriorityQueue, on_error=e)
 def myqueuedworker(task, **kwargs):
@@ -56,13 +65,6 @@ def myqueuedworker(task, **kwargs):
 def myeventworker(**kwargs):
     print('event worker is running')
     # time.sleep(1)
-
-
-task_supervisor.set_config(pool_size=0, reserve_normal=0, reserve_high=0)
-task_supervisor.poll_delay = 0.01
-task_supervisor.start()
-
-f = TaskCollection()
 
 
 #@background_task
@@ -88,12 +90,14 @@ def ttt():
     q = queue.Queue()
     q.get()
 
+
 # def stop():
-    # print('STOPPING')
-    # print('stopping supervisor')
-    # myworker.stop(wait=True)
-    # return
-    # task_supervisor.stop(wait=2)
+# print('STOPPING')
+# print('stopping supervisor')
+# myworker.stop(wait=True)
+# return
+# task_supervisor.stop(wait=2)
+
 
 @background_worker
 def someworker(**kwargs):
@@ -101,17 +105,19 @@ def someworker(**kwargs):
     time.sleep(0.5)
     # return False
 
+
 class W2(atasker.BackgroundIntervalWorker):
 
     def run(self, **kwargs):
         print(self)
 
+
 # print(f())
 # time.sleep(1)
 # task_supervisor.stop(wait=2)
 # exit()
-myworker.start(123,x=2)
-# myqueuedworker.start()
+myworker.start(123, x=2)
+myqueuedworker.start()
 # myeventworker.start()
 # someworker.start()
 # w2=W2(interval=1, name='w2')
@@ -120,8 +126,8 @@ myworker.start(123,x=2)
 # myevent.set()
 # time.sleep(2)
 # myqueuedworker.put('task2')
-# myqueuedworker.put('task3')
-# myqueuedworker.put('task4')
+myqueuedworker.put('task3')
+myqueuedworker.put('task4')
 # for i in range(100):
 # myqueuedworker.put(i)
 # myevent.set()
@@ -159,11 +165,15 @@ myworker.start(123,x=2)
 # print('xxx')
 # background_task(stop, delay=1, priority=atasker.TASK_CRITICAL)()
 print('waiting...')
+# time.sleep(0.5)
+# myworker.trigger()
 # time.sleep(1)
 # myworker.stop(wait=True)
 # someworker.stop(wait=True)
 # print('worker stopped')
-time.sleep(5)
+# time.sleep(2)
 # task_supervisor.block()
-task_supervisor.stop(wait=True)
-# print(c)
+loop.run_forever()
+task_supervisor.stop(wait=3)
+
+print(c)

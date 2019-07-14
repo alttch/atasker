@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, http://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 import threading
 import time
@@ -182,6 +182,9 @@ class TaskSupervisor:
             if r == RQ_SCHEDULER:
                 logger.debug('Supervisor: new scheduler {}'.format(res))
                 scheduler_task = self.event_loop.create_task(res.loop())
+                if hasattr(res, 'extra_loops'):
+                    for l in res.extra_loops:
+                        self.event_loop.create_task(getattr(res, l)())
                 with self._lock:
                     self._schedulers[res] = (res, scheduler_task)
             elif r == RQ_TASK:

@@ -59,6 +59,21 @@ Executor function gets in args/kwargs:
 
     If executor function return *False*, worker stops itself.
 
+Asynchronous executor function
+------------------------------
+
+Executor function can be asynchronous, in this case it's executed inside
+:doc:`task supervisor<supervisor>` loop, no new thread is started and
+*priority* is ignored.
+
+When *background_worker* decorator detects asynchronous function, class
+*BackgroundAsyncWorker* is automatically used instead of *BackgroundWorker*
+(*BackgroundQueueWorker*, *BackgroundEventWorker* and
+*BackgroundIntervalWorker* support synchronous functions out-of-the-box).
+
+Additional worker parameter *loop* may be specified to put executor function
+inside external async loop.
+
 .. contents::
 
 BackgroundWorker
@@ -97,32 +112,32 @@ in separate thread instantly.
     # stop 2nd worker, don't wait until it is really stopped
     myworker2.stop(wait=False)
 
-BackgroundIntervalWorker
-========================
+BackgroundAsyncWorker
+=====================
 
-Background worker which runs synchronous executor function but has asynchronous
-loop.
-
-Worker initial parameters:
-
-* **interval** run executor with a specified interval (in seconds)
-* **delay** delay between launches
-* **delay_before** delay before executor launch
-
-Parameters *interval* and *delay* can not be used together. All parameters can
-be overriden during startup by adding *_* prefix (e.g.
-*worker.start(_interval=1)*)
-
-Background interval worker is created automatically, as soon as annotator
-detects one of the parameters above:
+Similar to *BackgroundWorker* but used for async executor functions.
 
 .. code:: python
 
-    @background_worker(interval=1)
-    def myfunc(**kwargs):
-        print('I run every second!')
+    # with annotation - function becomes worker executor
+    from atasker import background_worker
 
-    myfunc.start()
+    @background_worker
+    async def async_worker(**kwargs):
+        print('I am async worker')
+
+    async_worker.start()
+
+    # with class 
+    from atasker import BackgroundAsyncWorker
+
+    class MyWorker(BackgroundAsyncWorker):
+
+        async def run(self, *args, **kwargs):
+            print('I am async worker too')
+
+    worker = MyWorker()
+    worker.start()
 
 BackgroundQueueWorker
 =====================
@@ -202,3 +217,43 @@ param.
 
 **trigger** method is used to put task into worker's queue. The method is
 thread-safe.
+
+BackgroundIntervalWorker
+========================
+
+Background worker which runs synchronous executor function but has asynchronous
+loop.
+
+Worker initial parameters:
+
+* **interval** run executor with a specified interval (in seconds)
+* **delay** delay between launches
+* **delay_before** delay before executor launch
+
+Parameters *interval* and *delay* can not be used together. All parameters can
+be overriden during startup by adding *_* prefix (e.g.
+*worker.start(_interval=1)*)
+
+Background interval worker is created automatically, as soon as annotator
+detects one of the parameters above:
+
+.. code:: python
+
+    @background_worker(interval=1)
+    def myfunc(**kwargs):
+        print('I run every second!')
+
+    @background_worker(interval=1)
+    async def myfunc2(**kwargs):
+        print('I run every second and I am async!')
+
+    myfunc.start()
+    myfunc2.start()
+
+As well as event worker, **BackgroundIntervalWorker** supports manual executor
+triggering with *worker.trigger()*
+
+BackgroundAsyncWorker
+=====================
+
+Similar to *BackgroundWorker* but used for asynchronous functions. 
