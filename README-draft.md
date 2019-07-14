@@ -42,9 +42,9 @@ task_supervisor.stop()
 
 ### Background task
 
+```python
 from atasker import background task, TASK_LOW, TASK_HIGH
 
-```python
 # with annotation
 @background_task(priority=TASK_LOW)
 def mytask():
