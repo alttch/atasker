@@ -1,6 +1,9 @@
 # atasker
 Python library for modern thread pooling and task processing using asyncio.
 
+<img src="https://img.shields.io/badge/license-Apache%202-blue.svg" />
+<img src="https://img.shields.io/badge/python-3.5%20%7C%203.6%20%7C%203.7-blue.svg" />
+
 No matter how your code is written, atasker automatically detects blocking
 functions and coroutines and launches them in a proper way, in a thread,
 asynchronous loop or in multiprocessing pool.
