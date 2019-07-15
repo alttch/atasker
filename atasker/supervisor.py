@@ -124,26 +124,26 @@ class TaskSupervisor:
                 del self._schedulers[scheduler]
                 return True
 
-    async def start_task(self, thread, thread_priority, time_put, delay=None):
+    async def _start_task(self, task, task_priority, time_put, delay=None):
         if not self._active: return
         self._lock.acquire()
         try:
-            if thread_priority != TASK_CRITICAL and self.pool_size:
-                self._thread_queue[thread_priority].append(thread)
+            if task_priority != TASK_CRITICAL and self.pool_size:
+                self._thread_queue[task_priority].append(task)
                 while self._active and \
                         (len(self._active_threads) >= \
-                                self._max_threads[thread_priority] \
-                        or self._thread_queue[thread_priority][0] != thread or \
-                        self._higher_queues_busy(thread_priority)):
+                                self._max_threads[task_priority] \
+                        or self._thread_queue[task_priority][0] != task or \
+                        self._higher_queues_busy(task_priority)):
                     self._lock.release()
                     await asyncio.sleep(self.poll_delay)
                     self._lock.acquire()
-                self._thread_queue[thread_priority].pop(0)
+                self._thread_queue[task_priority].pop(0)
                 if not self._active:
                     return
-            self._active_threads.add(thread)
+            self._active_threads.add(task)
             logger.debug('new task {} pool size: {} / {}'.format(
-                thread, len(self._active_threads), self.pool_size))
+                task, len(self._active_threads), self.pool_size))
         finally:
             try:
                 self._lock.release()
@@ -152,18 +152,18 @@ class TaskSupervisor:
         if delay:
             await asyncio.sleep(delay)
         if self._active:
-            thread.start()
+            task.start()
         time_started = time.time()
         time_spent = time_started - time_put
         if time_spent > self.timeout_critical:
-            logger.critical(self.timeout_message.format(thread, time_spent))
+            logger.critical(self.timeout_message.format(task, time_spent))
             if self.timeout_critical_func:
-                self.timeout_critical_func(thread)
+                self.timeout_critical_func(task)
         elif time_spent > self.timeout_warning:
-            logger.warning(self.timeout_message.format(thread, time_spent))
+            logger.warning(self.timeout_message.format(task, time_spent))
             if self.timeout_warning_func:
-                self.timeout_warning_func(thread)
-        thread.time_started = time_started
+                self.timeout_warning_func(task)
+        task.time_started = time_started
 
     def mark_task_completed(self, task=None):
         with self._lock:
@@ -207,7 +207,7 @@ class TaskSupervisor:
                 logger.debug('Supervisor: new task {}'.format(res))
                 target, priority, delay = res
                 self.event_loop.create_task(
-                    self.start_task(target, priority, t_put, delay))
+                    self._start_task(target, priority, t_put, delay))
         logger.info('supervisor event loop finished')
 
     def _start_event_loop(self):
