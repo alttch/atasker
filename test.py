@@ -32,12 +32,12 @@ c = 0
 task_supervisor.set_config(
     pool_size=20, reserve_normal=0, reserve_high=0, mp_pool=8)
 task_supervisor.poll_delay = 0.01
-task_supervisor.create_mp_pool(processes=4)
+task_supervisor.create_mp_pool()
 # task_supervisor.default_executor_loop = loop
 task_supervisor.start()
 
 f = TaskCollection()
-from multiprocessing import Pool
+# from multiprocessing import Pool
 
 # p = Pool(processes = 8)
 

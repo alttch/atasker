@@ -51,8 +51,9 @@ class TaskSupervisor:
         self.mp_pool = None
         if mp_pool:
             if isinstance(mp_pool, bool):
-                from multiprocessing import Pool
-                self.mp_pool = Pool(processes=8)
+                import multiprocessing
+                self.mp_pool = multiprocessing.Pool(
+                    processes=multiprocessing.cpu_count())
             else:
                 self.mp_pool = mp_pool
 
@@ -79,8 +80,12 @@ class TaskSupervisor:
         return True
 
     def create_mp_pool(self, *args, **kwargs):
-        from multiprocessing import Pool
-        self.mp_pool = Pool(*args, **kwargs)
+        import multiprocessing
+        if args or kwargs:
+            self.mp_pool = multiprocessing.Pool(*args, **kwargs)
+        else:
+            self.mp_pool = multiprocessing.Pool(
+                processes=multiprocessing.cpu_count())
 
     def register_scheduler(self, scheduler):
         if not self._started:
