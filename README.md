@@ -1,6 +1,10 @@
 # atasker
 Python library for modern thread pooling and task processing using asyncio.
 
+No matter how your code is written, atasker automatically detects blocking
+functions and coroutines and launches them in a proper way, in a thread,
+asynchronous loop or in multiprocessing pool.
+
 ## Install
 
 ```bash
@@ -29,6 +33,7 @@ all their public methods are thread-safe.
 
 ## Why not standard asyncio loops?
 
+* compatibility with blocking functions
 * async workers
 
 ## Code examples

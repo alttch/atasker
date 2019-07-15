@@ -1,9 +1,9 @@
 import time
 import logging
 
-import asyncio
+# import asyncio
 
-loop = asyncio.get_event_loop()
+# loop = asyncio.get_event_loop()
 
 from atasker import background_worker
 from atasker import background_task
@@ -29,23 +29,36 @@ Q = Queue()
 
 c = 0
 
-task_supervisor.set_config(pool_size=0, reserve_normal=0, reserve_high=0)
+task_supervisor.set_config(
+    pool_size=20, reserve_normal=0, reserve_high=0, mp_pool=8)
 task_supervisor.poll_delay = 0.01
+task_supervisor.create_mp_pool(processes=4)
+# task_supervisor.default_executor_loop = loop
 task_supervisor.start()
 
 f = TaskCollection()
+from multiprocessing import Pool
+
+# p = Pool(processes = 8)
 
 
-@background_worker
-async def myworker(*args, **kwargs):
+@background_worker(interval=0.5)
+def myworker(*args, **kwargs):
     global c
     print('worker is running')
     print(args)
     print(kwargs)
     c += 1
-    # time.sleep(0.1)
-    # print(c)
-    # return False
+    time.sleep(0.1)
+    print(c)
+    return False
+
+
+# task_supervisor.mp_pool.apply_async(myworker)
+# p.apply_async(func=myworker)
+# time.sleep(1)
+# task_supervisor.stop()
+# exit()
 
 
 def e(*args, **kwargs):
@@ -56,7 +69,7 @@ import asyncio
 
 
 @background_worker(q=asyncio.queues.PriorityQueue, on_error=e)
-def myqueuedworker(task, **kwargs):
+async def myqueuedworker(task, **kwargs):
     print('queued worker is running, queue task: {}'.format(task))
     # time.sleep(0.4)
 
@@ -102,37 +115,37 @@ def ttt():
 @background_worker
 def someworker(**kwargs):
     print('i am some worker')
-    time.sleep(0.5)
+    # time.sleep(0.5)
     # return False
-
-
-class W2(atasker.BackgroundIntervalWorker):
-
-    def run(self, **kwargs):
-        print(self)
 
 
 # print(f())
 # time.sleep(1)
 # task_supervisor.stop(wait=2)
 # exit()
-myworker.start(123, x=2)
+# myworker.start(123, x=2)
 myqueuedworker.start()
-# myeventworker.start()
+myeventworker.start()
 # someworker.start()
-# w2=W2(interval=1, name='w2')
+# w2=atasker.W2() #interval=0.1)
 # w2.start()
-# myqueuedworker.put('task1')
+# w2.trigger()
+# w2.put('xxx')
+# w2.put('xxx')
+# w2.put('xxx')
+# w2.put('xxx')
+myqueuedworker.put('task1')
 # myevent.set()
 # time.sleep(2)
-# myqueuedworker.put('task2')
-myqueuedworker.put('task3')
-myqueuedworker.put('task4')
+myqueuedworker.put('task2')
+# myqueuedworker.put('task3')
+# myqueuedworker.put('task4')
 # for i in range(100):
 # myqueuedworker.put(i)
 # myevent.set()
-# myeventworker.trigger()
-# myeventworker.trigger()
+myeventworker.trigger()
+time.sleep(0.5)
+myeventworker.trigger()
 # myeventworker.trigger()
 # time.sleep(1)
 # myeventworker.restart(wait=True)
@@ -171,9 +184,9 @@ print('waiting...')
 # myworker.stop(wait=True)
 # someworker.stop(wait=True)
 # print('worker stopped')
-# time.sleep(2)
+time.sleep(1)
 # task_supervisor.block()
-loop.run_forever()
-task_supervisor.stop(wait=3)
+# loop.run_forever()
+task_supervisor.stop(wait=2)
 
 print(c)

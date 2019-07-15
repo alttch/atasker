@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, http://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 import threading
 import time
@@ -30,7 +30,8 @@ class TaskSupervisor:
                  pool_size=15,
                  reserve_normal=5,
                  reserve_high=5,
-                 poll_delay=0.1):
+                 poll_delay=0.1,
+                 mp_pool=False):
 
         self.poll_delay = poll_delay
         self.timeout_warning = 5
@@ -46,6 +47,14 @@ class TaskSupervisor:
         self._max_threads = {}
         self._schedulers = {}
         self._queue = {TASK_LOW: [], TASK_NORMAL: [], TASK_HIGH: []}
+        self.default_async_executor_loop = None
+        self.mp_pool = None
+        if mp_pool:
+            if isinstance(mp_pool, bool):
+                from multiprocessing import Pool
+                self.mp_pool = Pool(processes=8)
+            else:
+                self.mp_pool = mp_pool
 
         self.set_config(
             pool_size=pool_size,
@@ -68,6 +77,10 @@ class TaskSupervisor:
             self._Q.put((RQ_TASK, (thread, priority, delay), time.time())),
             loop=self.event_loop)
         return True
+
+    def create_mp_pool(self, *args, **kwargs):
+        from multiprocessing import Pool
+        self.mp_pool = Pool(*args, **kwargs)
 
     def register_scheduler(self, scheduler):
         if not self._started:

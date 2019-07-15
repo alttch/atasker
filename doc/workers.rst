@@ -3,6 +3,8 @@ Workers
 
 Worker is an object which runs specified function (executor) in a loop.
 
+.. contents::
+
 Common
 ======
 
@@ -74,10 +76,76 @@ When *background_worker* decorator detects asynchronous function, class
 Additional worker parameter *loop* may be specified to put executor function
 inside external async loop.
 
-.. contents::
+To use external async loop by default, it may be specified in task supervisor,
+as default:
+
+.. code:: python
+
+    # loop = some asyncio loop
+
+    from atasker import task_supervisor
+
+    task_supervisor.default_async_executor_loop = loop
+
+Multiprocessing executor function
+---------------------------------
+
+To use multiprocessing, :ref:`task supervisor<create_mp_pool>` mp pool must be
+created.
+
+If executor method *run* is defined as static, workers automatically detect
+this and use multiprocessing pool of task supervisor to launch executor.
+
+.. note::
+
+    As executor is started in separate process, it doesn't have an access to
+    *self* object.
+
+Additionally, method *process_result* must be defined in worker class to
+process executor result. The method can stop worker by returning *False* value.
+
+.. note::
+
+    Workers with multiprocessing executor ignore *priority* option.
+
+Example, let's define *BackgroundQueueWorker*. Python multiprocessing module
+can not pick execution function defined via annotation, so worker class is
+required. Create it in separate module as Python multiprocessing can not pick
+methods from the module where the worker is started:
+
+*myworker.py*
+
+.. code:: python
+
+    class MyWorker(BackgroundQueueWorker):
+
+        # executed in another process via task_supervisor
+        @staticmethod
+        def run(task, *args, **kwargs):
+            # .. process task
+            return '<task result>'
+
+        def process_result(self, result):
+            # process result
+
+*main.py*
+
+.. code:: python
+
+    from myworker import MyWorker
+
+    worker = MyWorker()
+    worker.start()
+    # .....
+    worker.put('task')
+    # .....
+    worker.stop()
+
+Workers
+=======
 
 BackgroundWorker
-================
+----------------
 
 Background worker is a worker which continuously run executor function in a
 loop without any condition. Loop of this worker is synchronous and is started
@@ -113,7 +181,7 @@ in separate thread instantly.
     myworker2.stop(wait=False)
 
 BackgroundAsyncWorker
-=====================
+---------------------
 
 Similar to *BackgroundWorker* but used for async executor functions.
 
@@ -140,7 +208,7 @@ Similar to *BackgroundWorker* but used for async executor functions.
     worker.start()
 
 BackgroundQueueWorker
-=====================
+---------------------
 
 Background worker which gets data from asynchronous queue and passes it to
 synchronous executor.
@@ -183,7 +251,7 @@ priority queue, specify its class instead of just *True*.
 thread-safe.
 
 BackgroundEventWorker
-=====================
+---------------------
 
 Background worker which runs asynchronous loop waiting for the event and
 launches synchronous executor when it's happened.
@@ -219,7 +287,7 @@ param.
 thread-safe.
 
 BackgroundIntervalWorker
-========================
+------------------------
 
 Background worker which runs synchronous executor function but has asynchronous
 loop.
@@ -254,6 +322,6 @@ As well as event worker, **BackgroundIntervalWorker** supports manual executor
 triggering with *worker.trigger()*
 
 BackgroundAsyncWorker
-=====================
+---------------------
 
 Similar to *BackgroundWorker* but used for asynchronous functions. 

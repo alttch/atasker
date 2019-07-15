@@ -66,6 +66,8 @@ reserve_high*, so in the example above: *20 + 5 + 5 = 30*.
 Tasks with priority *TASK_CRITICAL* are always started instantly, no matter how
 busy task pool is, and the pool is being extended for them with no limits.
 
+To make pool size unlimited, set *pool_size=0*.
+
 .. note::
 
     pool size can be changed while task supervisor is running.
@@ -116,7 +118,6 @@ number of seconds) and run timeout handler functions:
     task_supervisor.timeout_critical = 10
     task_supervisor.timeout_critical_func = critical
 
-
 Stopping task supervisor
 ========================
 
@@ -137,6 +138,31 @@ Params:
 
 * **cancel_tasks** if specified, task supervisor will try to forcibly cancel
   all scheduler coroutines. 
+
+.. _create_mp_pool:
+
+Multiprocessing
+===============
+
+Multiprocessing pool may be used by workers and background tasks to execute a
+part of code.
+
+To create multiprocessing pool, use method:
+
+.. code:: python
+
+    from atasker import task_supervisor
+
+    # task_supervisor.create_mp_pool(<args for multiprocessing.Pool>)
+    # e.g.
+    task_supervisor.create_mp_pool(processes=8)
+
+    # use custom mp Pool
+
+    from multiprocessing import Pool
+
+    pool = Pool(processes=4)
+    task_supervisor.mp_pool = pool
 
 Custom task supervisor
 ======================
