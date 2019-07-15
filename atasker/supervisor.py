@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, http://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 import threading
 import time
@@ -20,23 +20,28 @@ RQ_TASK = 2
 
 logger = logging.getLogger('atasker/supervisor')
 
+default_poll_delay = 0.1
+
+thread_pool_default_size = 15
+thread_pool_default_reserve_normal = 5
+thread_pool_default_reserve_high = 5
+
+default_timeout_warning = 5
+default_timeout_critical = 10
+
 
 class TaskSupervisor:
 
     timeout_message = 'Task {} started in {:.3f} seconds. ' + \
             'Increase pool size or decrease number of workers'
 
-    def __init__(self,
-                 pool_size=15,
-                 reserve_normal=5,
-                 reserve_high=5,
-                 poll_delay=0.1,
-                 mp_pool=False):
+    def __init__(self):
 
-        self.poll_delay = poll_delay
-        self.timeout_warning = 5
+        self.poll_delay = default_poll_delay
+
+        self.timeout_warning = default_timeout_warning
         self.timeout_warning_func = None
-        self.timeout_critical = 10
+        self.timeout_critical = default_timeout_critical
         self.timeout_critical_func = None
 
         self._active_threads = set()
@@ -46,36 +51,38 @@ class TaskSupervisor:
         self._lock = threading.Lock()
         self._max_threads = {}
         self._schedulers = {}
-        self._queue = {TASK_LOW: [], TASK_NORMAL: [], TASK_HIGH: []}
+        self._thread_queue = {TASK_LOW: [], TASK_NORMAL: [], TASK_HIGH: []}
         self.default_async_executor_loop = None
         self.mp_pool = None
-        if mp_pool:
-            if isinstance(mp_pool, bool):
-                import multiprocessing
-                self.mp_pool = multiprocessing.Pool(
-                    processes=multiprocessing.cpu_count())
-            else:
-                self.mp_pool = mp_pool
 
-        self.set_config(
-            pool_size=pool_size,
-            reserve_normal=reserve_normal,
-            reserve_high=reserve_high)
+        self.set_thread_pool(
+            pool_size=thread_pool_default_size,
+            reserve_normal=thread_pool_default_reserve_normal,
+            reserve_high=thread_pool_default_reserve_high)
+
+    def set_thread_pool(self, **kwargs):
+        for p in ['pool_size', 'reserve_normal', 'reserve_high']:
+            if p in kwargs:
+                setattr(self, p, int(kwargs[p]))
+        self._max_threads[TASK_LOW] = self.pool_size
+        self._max_threads[TASK_NORMAL] = self.pool_size + self.reserve_normal
+        self._max_threads[TASK_HIGH] = self.pool_size + \
+                self.reserve_normal + self.reserve_high
 
     def _higher_queues_busy(self, task_priority):
         if task_priority == TASK_NORMAL:
-            return len(self._queue[TASK_HIGH]) > 0
+            return len(self._thread_queue[TASK_HIGH]) > 0
         elif task_priority == TASK_LOW:
-            return len(self._queue[TASK_NORMAL]) > 0 or \
-                    len(self._queue[TASK_HIGH]) > 0
+            return len(self._thread_queue[TASK_NORMAL]) > 0 or \
+                    len(self._thread_queue[TASK_HIGH]) > 0
         else:
             return False
 
-    def put_task(self, thread, priority=TASK_NORMAL, delay=None):
+    def put_task(self, task, priority=TASK_NORMAL, delay=None):
         if not self._started:
             return False
         asyncio.run_coroutine_threadsafe(
-            self._Q.put((RQ_TASK, (thread, priority, delay), time.time())),
+            self._Q.put((RQ_TASK, (task, priority, delay), time.time())),
             loop=self.event_loop)
         return True
 
@@ -122,16 +129,16 @@ class TaskSupervisor:
         self._lock.acquire()
         try:
             if thread_priority != TASK_CRITICAL and self.pool_size:
-                self._queue[thread_priority].append(thread)
+                self._thread_queue[thread_priority].append(thread)
                 while self._active and \
                         (len(self._active_threads) >= \
                                 self._max_threads[thread_priority] \
-                            or self._queue[thread_priority][0] != thread or \
-                            self._higher_queues_busy(thread_priority)):
+                        or self._thread_queue[thread_priority][0] != thread or \
+                        self._higher_queues_busy(thread_priority)):
                     self._lock.release()
                     await asyncio.sleep(self.poll_delay)
                     self._lock.acquire()
-                self._queue[thread_priority].pop(0)
+                self._thread_queue[thread_priority].pop(0)
                 if not self._active:
                     return
             self._active_threads.add(thread)
@@ -167,15 +174,6 @@ class TaskSupervisor:
                 logger.debug('removed task {} pool size: {} / {}'.format(
                     task, len(self._active_threads), self.pool_size))
         return True
-
-    def set_config(self, **kwargs):
-        for p in ['pool_size', 'reserve_normal', 'reserve_high']:
-            if p in kwargs:
-                setattr(self, p, int(kwargs[p]))
-        self._max_threads[TASK_LOW] = self.pool_size
-        self._max_threads[TASK_NORMAL] = self.pool_size + self.reserve_normal
-        self._max_threads[TASK_HIGH] = self.pool_size + \
-                self.reserve_normal + self.reserve_high
 
     def start(self):
         self._active = True

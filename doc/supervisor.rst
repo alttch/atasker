@@ -16,7 +16,8 @@ created.
 
     from atasker import task_supervisor
 
-    task_supervisor.set_config(pool_size=20, reserve_normal=5, reserve_high=5)
+    task_supervisor.set_thread_pool(
+        pool_size=20, reserve_normal=5, reserve_high=5)
     task_supervisor.start()
 
 .. warning::
@@ -47,8 +48,8 @@ Task supervisor supports 4 task priorities:
 Pool size
 =========
 
-Parameter **pool_size** for **task_supervisor.set_config** (or supervisor
-constructor) defines size of the task (thread) pool.
+Parameter **pool_size** for **task_supervisor.set_thread_pool** defines size of
+the task (thread) pool.
 
 Pool size means the maximum number of the concurrent tasks which can run. If
 task supervisor receive more tasks than pool size has, they will wait until

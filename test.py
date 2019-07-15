@@ -29,7 +29,7 @@ Q = Queue()
 
 c = 0
 
-task_supervisor.set_config(
+task_supervisor.set_thread_pool(
     pool_size=20, reserve_normal=0, reserve_high=0, mp_pool=8)
 task_supervisor.poll_delay = 0.01
 task_supervisor.create_mp_pool()
