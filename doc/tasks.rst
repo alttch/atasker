@@ -31,7 +31,6 @@ To start task function without annotation, you must manually decorate it:
 
     from atasker import background_task, TASK_LOW
 
-    @background_task
     def mytask():
         print('I am working in the background!')
 
