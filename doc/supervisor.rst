@@ -224,4 +224,12 @@ Own task scheduler (worker) can be registered in task supervisor with:
 Where *scheduler* = scheduler object, which should implement at least *stop*
 (regular) and *loop* (async) methods.
 
+Task supervisor can also register synchronous schedulers/workers, but it can
+only stop them when *stop* method is called:
 
+.. code:: python
+
+    task_supervisor.register_sync_scheduler(scheduler)
+
+To unregister schedulers from task supervisor, use *unregister_scheduler* and
+*unregister_sync_scheduler* methods.

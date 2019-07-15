@@ -76,8 +76,7 @@ When *background_worker* decorator detects asynchronous function, class
 Additional worker parameter *loop* may be specified to put executor function
 inside external async loop.
 
-To use external async loop by default, it may be specified in task supervisor,
-as default:
+Default external loop may be also specified in task supervisor:
 
 .. code:: python
 
