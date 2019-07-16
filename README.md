@@ -48,7 +48,7 @@ all their public methods are thread-safe.
 from atasker import task_supervisor
 
 # set pool size
-task_supervisor.set_config(pool_size=20, reserve_normal=5, reserve_high=5)
+task_supervisor.set_thread_pool(pool_size=20, reserve_normal=5, reserve_high=5)
 task_supervisor.start()
 # ...
 # start workers, other threads etc.
