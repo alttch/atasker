@@ -149,6 +149,9 @@ class BackgroundWorker:
         self._current_executor = None
         self._send_executor_stop_event()
 
+    def process_result(self, result):
+        pass
+
     def loop(self, *args, **kwargs):
         self.mark_started()
         while self._active:

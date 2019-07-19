@@ -36,11 +36,17 @@ task_supervisor.create_mp_pool()
 # task_supervisor.default_executor_loop = loop
 task_supervisor.start()
 
+
 f = TaskCollection()
 # from multiprocessing import Pool
 
 # p = Pool(processes = 8)
 
+from tests.mpworker import MPWorker
+
+mpw = MPWorker(interval=0.5)
+
+mpw.start()
 
 @background_worker(interval=0.5)
 def myworker(*args, **kwargs):
