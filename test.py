@@ -46,9 +46,9 @@ f = TaskCollection()
 
 from tests.mpworker import MPWorker
 
-mpw = MPWorker(interval=0.5)
+# mpw = MPWorker(interval=0.5)
 
-mpw.start()
+# mpw.start()
 
 @background_worker(interval=0.5)
 def myworker(*args, **kwargs):
@@ -91,7 +91,7 @@ def myeventworker(**kwargs):
 #@background_task
 def test(*args, **kwargs):
     print('job ttt: test', args, kwargs)
-    # time.sleep(3)
+    time.sleep(1)
 
 
 @f(priority=atasker.TASK_CRITICAL)
@@ -132,7 +132,7 @@ def someworker(**kwargs):
 # task_supervisor.stop(wait=2)
 # exit()
 # myworker.start(123, x=2)
-myqueuedworker.start()
+# myqueuedworker.start()
 # myeventworker.start()
 # someworker.start()
 # w2=atasker.W2() #interval=0.1)
@@ -145,8 +145,8 @@ myqueuedworker.start()
 # myqueuedworker.put('task1')
 # myevent.set()
 # time.sleep(2)
-myqueuedworker.put('task2')
-myqueuedworker.put('task3')
+# myqueuedworker.put('task2')
+# myqueuedworker.put('task3')
 # myqueuedworker.put('task4')
 # for i in range(100):
 # myqueuedworker.put(i)
@@ -165,8 +165,8 @@ myqueuedworker.put('task3')
 # time.sleep(0.1)
 # myworker.stop()
 # myworker.start()
-# background_task(test, name='ttt', priority=atasker.TASK_CRITICAL)()
-# background_task(test, name='ttt', priority=atasker.TASK_HIGH)(1,a=2)
+background_task(test, name='ttt', priority=atasker.TASK_CRITICAL)()
+background_task(test, name='ttt', priority=atasker.TASK_HIGH)(1,a=2)
 # test()
 # test(1, a=2)
 # background_task(test, name='ttt')()
