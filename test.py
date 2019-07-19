@@ -77,7 +77,7 @@ import asyncio
 
 
 @background_worker(q=asyncio.queues.PriorityQueue, on_error=e)
-async def myqueuedworker(task, **kwargs):
+def myqueuedworker(task, **kwargs):
     print('queued worker is running, queue task: {}'.format(task))
     # time.sleep(0.4)
 

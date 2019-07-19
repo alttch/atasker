@@ -159,7 +159,6 @@ class TaskSupervisor:
 
     async def _start_task(self, tt, task, task_priority, time_put, delay=None):
         if not self._active: return
-        self._lock.acquire()
         if tt == TT_THREAD:
             pool_size = self.thread_pool_size
             q = self._thread_queue[task_priority]
@@ -168,6 +167,7 @@ class TaskSupervisor:
             pool_size = self.mp_pool_size
             q = self._mp_queue[task_priority]
             mx = self._max_mps[task_priority]
+        self._lock.acquire()
         try:
             if task_priority != TASK_CRITICAL and pool_size:
                 q.append(task)
