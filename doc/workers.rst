@@ -324,7 +324,3 @@ detects one of the parameters above:
 As well as event worker, **BackgroundIntervalWorker** supports manual executor
 triggering with *worker.trigger()*
 
-BackgroundAsyncWorker
----------------------
-
-Similar to *BackgroundWorker* but used for asynchronous functions. 
