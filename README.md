@@ -8,6 +8,15 @@ No matter how your code is written, atasker automatically detects blocking
 functions and coroutines and launches them in a proper way, in a thread,
 asynchronous loop or in multiprocessing pool.
 
+Tasks are grouped into pools. If there's no space in pool, task is being placed
+into waiting queue according to their priority. Pool also has "reserve" for the
+tasks with priorities "normal" and higher. Tasks with "critical" priority are
+always executed instantly.
+
+This library is useful if you have a project with many similar tasks which
+produce approximately equal CPU/memory load, e.g. API responses, scheduled
+resource state updates etc.
+
 ## Install
 
 ```bash
