@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from pathlib import Path
 
 import sys
@@ -17,7 +19,11 @@ result = SimpleNamespace(
     background_queue_worker=0,
     background_event_worker=0)
 
-logging.basicConfig(level=logging.DEBUG)
+try:
+    if sys.argv[1] == 'debug':
+        logging.basicConfig(level=logging.DEBUG)
+except:
+    pass
 
 sys.path.append(Path().absolute().parent.as_posix())
 
