@@ -19,12 +19,6 @@ result = SimpleNamespace(
     background_queue_worker=0,
     background_event_worker=0)
 
-try:
-    if sys.argv[1] == 'debug':
-        logging.basicConfig(level=logging.DEBUG)
-except:
-    pass
-
 sys.path.append(Path().absolute().parent.as_posix())
 
 
@@ -145,6 +139,11 @@ task_supervisor.set_thread_pool(pool_size=20, reserve_normal=5, reserve_high=5)
 task_supervisor.set_mp_pool(pool_size=20, reserve_normal=5, reserve_high=5)
 
 if __name__ == '__main__':
+    try:
+        if sys.argv[1] == 'debug':
+            logging.basicConfig(level=logging.DEBUG)
+    except:
+        pass
     task_supervisor.start()
     task_supervisor.poll_delay = 0.01
     test_suite = unittest.TestLoader().loadTestsFromTestCase(Test)
