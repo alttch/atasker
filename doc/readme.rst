@@ -53,6 +53,23 @@ Why not standard asyncio loops?
 -  compatibility with blocking functions
 -  async workers
 
+Why not concurrent.futures?
+---------------------------
+
+**concurrent.futures** is a great standard Python library which allows
+you to execute specified tasks in a pool of workers.
+
+**atasker** method *background\_task* solves the same problem but in
+slightly different way, providing priorities to the tasks, while
+*atasker* workers do absolutely different job:
+
+-  in *concurrent.futures* worker is a pool member which executes the
+   single specified task.
+
+-  in *atasker* worker is an object, which continuously *generates* new
+   tasks with the specified interval or on external event, and executes
+   them in thread or multiprocessing pool.
+
 Code examples
 -------------
 
