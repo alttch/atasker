@@ -9,6 +9,10 @@ from atasker.supervisor import TASK_NORMAL
 from atasker.supervisor import TASK_HIGH
 from atasker.supervisor import TASK_CRITICAL
 
+# from atasker.supervisor import TT_COROUTINE
+from atasker.supervisor import TT_THREAD
+from atasker.supervisor import TT_MP
+
 task_supervisor = TaskSupervisor()
 
 from atasker.workers import background_worker

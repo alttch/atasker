@@ -16,6 +16,7 @@ created.
 
     from atasker import task_supervisor
 
+    # thread pool
     task_supervisor.set_thread_pool(
         pool_size=20, reserve_normal=5, reserve_high=5)
     task_supervisor.start()
@@ -65,7 +66,9 @@ For *TASK_HIGH* pool size can be extended up to *pool_size + reserve_normal +
 reserve_high*, so in the example above: *20 + 5 + 5 = 30*.
 
 Tasks with priority *TASK_CRITICAL* are always started instantly, no matter how
-busy task pool is, and the pool is being extended for them with no limits.
+busy task pool is, and thread pool is being extended for them with no limits.
+Multiprocessing critical tasks are started as soon as *multiprocessing.Pool*
+object has free space for the task.
 
 To make pool size unlimited, set *pool_size=0*.
 
@@ -165,6 +168,11 @@ To create multiprocessing pool, use method:
     pool = Pool(processes=4)
     task_supervisor.mp_pool = pool
 
+    # set mp pool size. if pool wasn't created before, it will be initialized
+    # with processes=(pool_size+reserve_normal+reserve_high)
+    task_supervisor.set_mp_pool(
+        pool_size=20, reserve_normal=5, reserve_high=5)
+
 Custom task supervisor
 ======================
 
@@ -212,6 +220,41 @@ thread ID is being used:
 
     t = threading.Thread(target=mytask)
     task_supervisor.put_task(t)
+
+Putting own tasks in multiprocessing pool
+=========================================
+
+To put own task into multiprocessing pool, you must create tuple object which contains:
+
+* unique task id
+* task function (static method)
+* function args
+* function kwargs
+* result callback function
+
+.. code:: python
+
+    import uuid
+
+    from atasker import TT_MP
+
+    task_id = uuid.uuid4()
+
+    task = (
+        task_id,
+        <somemodule.staticmethod>,
+        args,
+        kwargs,
+        callback
+    )
+
+    task_supervisor.put_task(task, tt=TT_MP)
+
+After the function is finished, you should notify task supervisor:
+
+.. code:: python
+
+    task_supervisor.mark_task_completed(task=<task_id>, tt=TT_MP)
 
 Creating own schedulers
 =======================

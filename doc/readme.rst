@@ -1,8 +1,21 @@
 atasker
 =======
 
-Python library for modern thread pooling and task processing using
-asyncio.
+Python library for modern thread and multiprocessing pooling and task
+processing using asyncio.
+
+No matter how your code is written, atasker automatically detects
+blocking functions and coroutines and launches them in a proper way, in
+a thread, asynchronous loop or in multiprocessing pool.
+
+Tasks are grouped into pools. If there's no space in pool, task is being
+placed into waiting queue according to their priority. Pool also has
+"reserve" for the tasks with priorities "normal" and higher. Tasks with
+"critical" priority are always executed instantly.
+
+This library is useful if you have a project with many similar tasks
+which produce approximately equal CPU/memory load, e.g. API responses,
+scheduled resource state updates etc.
 
 Install
 -------
@@ -37,6 +50,7 @@ Why not standard Python thread pool?
 Why not standard asyncio loops?
 -------------------------------
 
+-  compatibility with blocking functions
 -  async workers
 
 Code examples
@@ -51,8 +65,7 @@ Start/stop
     from atasker import task_supervisor
 
     # set pool size
-    task_supervisor.set_thread_pool(
-        pool_size=20, reserve_normal=5, reserve_high=5)
+    task_supervisor.set_thread_pool(pool_size=20, reserve_normal=5, reserve_high=5)
     task_supervisor.start()
     # ...
     # start workers, other threads etc.

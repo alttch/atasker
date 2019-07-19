@@ -19,11 +19,16 @@ TASK_CRITICAL = 0
 RQ_SCHEDULER = 1
 RQ_TASK = 2
 
+TT_COROUTINE = 0
+TT_THREAD = 1
+TT_MP = 2
+
 logger = logging.getLogger('atasker/supervisor')
 
 default_poll_delay = 0.1
 
 thread_pool_default_size = multiprocessing.cpu_count()
+mp_pool_default_size = multiprocessing.cpu_count()
 default_reserve_normal = 5
 default_reserve_high = 5
 
@@ -46,13 +51,16 @@ class TaskSupervisor:
         self.timeout_critical_func = None
 
         self._active_threads = set()
+        self._active_mps = set()
         self._active = False
         self._main_loop_active = False
         self._started = False
         self._lock = threading.Lock()
         self._max_threads = {}
+        self._max_mps = {}
         self._schedulers = {}
         self._thread_queue = {TASK_LOW: [], TASK_NORMAL: [], TASK_HIGH: []}
+        self._mp_queue = {TASK_LOW: [], TASK_NORMAL: [], TASK_HIGH: []}
         self.default_async_executor_loop = None
         self.mp_pool = None
 
@@ -71,20 +79,38 @@ class TaskSupervisor:
         self._max_threads[TASK_HIGH] = self.thread_pool_size + \
                 self.thread_reserve_normal + self.thread_reserve_high
 
-    def _higher_queues_busy(self, task_priority):
+    def set_mp_pool(self, **kwargs):
+        for p in ['pool_size', 'reserve_normal', 'reserve_high']:
+            if p in kwargs:
+                setattr(self, 'mp_' + p, int(kwargs[p]))
+        self._max_mps[TASK_LOW] = self.mp_pool_size
+        self._max_mps[TASK_NORMAL] = self.mp_pool_size + self.mp_reserve_normal
+        self._max_mps[TASK_HIGH] = self.mp_pool_size + \
+                self.mp_reserve_normal + self.mp_reserve_high
+        if not self.mp_pool:
+            self.create_mp_pool(processes=self._max_mps[TASK_HIGH])
+
+    def _higher_queues_busy(self, tt, task_priority):
         if task_priority == TASK_NORMAL:
-            return len(self._thread_queue[TASK_HIGH]) > 0
+            if tt == TT_THREAD:
+                return len(self._thread_queue[TASK_HIGH]) > 0
+            elif tt == TT_MP:
+                return len(self._mp_queue[TASK_HIGH]) > 0
         elif task_priority == TASK_LOW:
-            return len(self._thread_queue[TASK_NORMAL]) > 0 or \
-                    len(self._thread_queue[TASK_HIGH]) > 0
+            if tt == TT_THREAD:
+                return len(self._thread_queue[TASK_NORMAL]) > 0 or \
+                        len(self._thread_queue[TASK_HIGH]) > 0
+            elif tt == TT_MP:
+                return len(self._mp_queue[TASK_NORMAL]) > 0 or \
+                        len(self._mp_queue[TASK_HIGH]) > 0
         else:
             return False
 
-    def put_task(self, task, priority=TASK_NORMAL, delay=None):
+    def put_task(self, task, priority=TASK_NORMAL, delay=None, tt=TT_THREAD):
         if not self._started:
             return False
         asyncio.run_coroutine_threadsafe(
-            self._Q.put((RQ_TASK, (task, priority, delay), time.time())),
+            self._Q.put((RQ_TASK, (tt, task, priority, delay), time.time())),
             loop=self.event_loop)
         return True
 
@@ -125,26 +151,44 @@ class TaskSupervisor:
                 del self._schedulers[scheduler]
                 return True
 
-    async def _start_task(self, task, task_priority, time_put, delay=None):
+    def _get_active_count(self, tt):
+        if tt == TT_THREAD:
+            return len(self._active_threads)
+        elif tt == TT_MP:
+            return len(self._active_mps)
+
+    async def _start_task(self, tt, task, task_priority, time_put, delay=None):
         if not self._active: return
         self._lock.acquire()
+        if tt == TT_THREAD:
+            pool_size = self.thread_pool_size
+            q = self._thread_queue[task_priority]
+            mx = self._max_threads[task_priority]
+        elif tt == TT_MP:
+            pool_size = self.mp_pool_size
+            q = self._mp_queue[task_priority]
+            mx = self._max_mps[task_priority]
         try:
-            if task_priority != TASK_CRITICAL and self.thread_pool_size:
-                self._thread_queue[task_priority].append(task)
+            if task_priority != TASK_CRITICAL and pool_size:
+                q.append(task)
                 while self._active and \
-                        (len(self._active_threads) >= \
-                                self._max_threads[task_priority] \
-                        or self._thread_queue[task_priority][0] != task or \
-                        self._higher_queues_busy(task_priority)):
+                        (self._get_active_count(tt) >= mx \
+                        or q[0] != task or \
+                        self._higher_queues_busy(tt, task_priority)):
                     self._lock.release()
                     await asyncio.sleep(self.poll_delay)
                     self._lock.acquire()
-                self._thread_queue[task_priority].pop(0)
+                q.pop(0)
                 if not self._active:
                     return
-            self._active_threads.add(task)
-            logger.debug('new task {} pool size: {} / {}'.format(
-                task, len(self._active_threads), self.thread_pool_size))
+            if tt == TT_THREAD:
+                self._active_threads.add(task)
+                logger.debug('new task {}, thread pool size: {} / {}'.format(
+                    task, len(self._active_threads), self.thread_pool_size))
+            elif tt == TT_MP:
+                self._active_mps.add(task[0])
+                logger.debug('new task {}, mp pool size: {} / {}'.format(
+                    task, len(self._active_mps), self.mp_pool_size))
         finally:
             try:
                 self._lock.release()
@@ -153,7 +197,12 @@ class TaskSupervisor:
         if delay:
             await asyncio.sleep(delay)
         if self._active:
-            task.start()
+            if tt == TT_THREAD:
+                task.start()
+            elif tt == TT_MP:
+                kw = task[3].copy()
+                kw['_task_id'] = task[0]
+                self.mp_pool.apply_async(task[1], task[2], kw, task[4])
         time_started = time.time()
         time_spent = time_started - time_put
         if time_spent > self.timeout_critical:
@@ -164,16 +213,25 @@ class TaskSupervisor:
             logger.warning(self.timeout_message.format(task, time_spent))
             if self.timeout_warning_func:
                 self.timeout_warning_func(task)
-        task.time_started = time_started
+        if tt == TT_THREAD:
+            task.time_started = time_started
 
-    def mark_task_completed(self, task=None):
+    def mark_task_completed(self, task=None, tt=TT_THREAD):
         with self._lock:
-            if task is None:
-                task = threading.current_thread()
-            if task in self._active_threads:
-                self._active_threads.remove(task)
-                logger.debug('removed task {} pool size: {} / {}'.format(
-                    task, len(self._active_threads), self.thread_pool_size))
+            if tt == TT_THREAD:
+                if task is None:
+                    task = threading.current_thread()
+                if task in self._active_threads:
+                    self._active_threads.remove(task)
+                    logger.debug(
+                        'removed task {}, thread pool size: {} / {}'.format(
+                            task, len(self._active_threads),
+                            self.thread_pool_size))
+            elif tt == TT_MP:
+                if task in self._active_mps:
+                    self._active_mps.remove(task)
+                    logger.debug('removed task {} mp pool size: {} / {}'.format(
+                        task, len(self._active_mps), self.mp_pool_size))
         return True
 
     def start(self):
@@ -206,9 +264,9 @@ class TaskSupervisor:
                     self._schedulers[res] = (res, scheduler_task)
             elif r == RQ_TASK:
                 logger.debug('Supervisor: new task {}'.format(res))
-                target, priority, delay = res
+                tt, target, priority, delay = res
                 self.event_loop.create_task(
-                    self._start_task(target, priority, t_put, delay))
+                    self._start_task(tt, target, priority, t_put, delay))
         logger.info('supervisor event loop finished')
 
     def _start_event_loop(self):

@@ -14,6 +14,7 @@ import types
 from atasker import task_supervisor
 
 from atasker import TASK_NORMAL
+from atasker.supervisor import TT_COROUTINE, TT_THREAD, TT_MP
 
 logger = logging.getLogger('atasker/workers')
 
@@ -144,6 +145,7 @@ class BackgroundWorker:
         self.stop(wait=False)
 
     def _cb_mp(self, result):
+        self.supervisor.mark_task_completed(self._current_executor, tt=TT_MP)
         if self.process_result(result) is False:
             self._abort()
         self._current_executor = None
@@ -283,11 +285,13 @@ class BackgroundAsyncWorker(BackgroundWorker):
             self._current_executor = None
             return result is not False and self._active
         elif self._run_in_mp:
-            self._current_executor = self.run
-            self.supervisor.mp_pool.apply_async(self.run,
-                                                args + self._task_args,
-                                                self._task_kwargs, self._cb_mp)
-            return self._active
+            task_id = uuid.uuid4()
+            self._current_executor = task_id
+            return self.supervisor.put_task(
+                (task_id, self.run, args + self._task_args,
+                 self._task_kwargs, self._cb_mp),
+                self.priority,
+                tt=TT_MP) and self._active
         else:
             t = threading.Thread(
                 target=self._run,

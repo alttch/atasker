@@ -56,6 +56,8 @@ Executor function gets in args/kwargs:
 
 * **_worker** current worker object
 * **_worker_name** current worker name
+* **_task_id** if executor function is started in multiprocessing pool - ID of
+  current task (for thread pool, task id = thread name).
 
 .. note::
 
@@ -102,10 +104,6 @@ this and use multiprocessing pool of task supervisor to launch executor.
 
 Additionally, method *process_result* must be defined in worker class to
 process executor result. The method can stop worker by returning *False* value.
-
-.. note::
-
-    Workers with multiprocessing executor ignore *priority* option.
 
 Example, let's define *BackgroundQueueWorker*. Python multiprocessing module
 can not pick execution function defined via annotation, so worker class is
