@@ -1,4 +1,4 @@
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 
 import setuptools
 
@@ -11,7 +11,7 @@ setuptools.setup(
     author='Altertech Group',
     author_email='div@altertech.com',
     description=
-    'Python library for modern thread polling and ask processing using asyncio',
+    'Python library for modern thread polling and task processing via asyncio',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/alttch/atasker',
