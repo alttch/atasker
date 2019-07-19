@@ -1,6 +1,6 @@
 # atasker
-Python library for modern thread and multiprocessing pooling and task
-processing using asyncio.
+Python library for modern thread / multiprocessing pooling and task
+processing via asyncio.
 
 <img src="https://img.shields.io/badge/license-Apache%202-blue.svg" />
 <img src="https://img.shields.io/badge/python-3.5%20%7C%203.6%20%7C%203.7-blue.svg" />
