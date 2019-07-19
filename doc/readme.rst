@@ -60,8 +60,8 @@ Why not concurrent.futures?
 you to execute specified tasks in a pool of workers.
 
 **atasker** method *background\_task* solves the same problem but in
-slightly different way, providing priorities to the tasks, while
-*atasker* workers do absolutely different job:
+slightly different way, adding priorities to the tasks, while *atasker*
+workers do absolutely different job:
 
 -  in *concurrent.futures* worker is a pool member which executes the
    single specified task.
