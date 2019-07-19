@@ -67,10 +67,10 @@ Run in async way
 
 .. code:: python
 
-    from atasker import co_apply, TASK_HIGH
+    from atasker import co_mp_apply, TASK_HIGH
 
     async def f1():
-        result = await co_apply(
+        result = await co_mp_apply(
             tests.mp.test, args=(1,2,3), kwargs={'x': 2},
             priority=TASK_HIGH)
 

@@ -75,7 +75,7 @@ import asyncio
 
 import tests.mp
 
-from atasker import co_apply
+from atasker import co_mp_apply
 
 
 @background_worker(q=asyncio.queues.PriorityQueue, on_error=e)

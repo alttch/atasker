@@ -28,6 +28,6 @@ from atasker.f import TaskCollection
 from atasker.threads import LocalProxy
 from atasker.threads import background_task
 
-from atasker.co import co_apply
+from atasker.co import co_mp_apply
 
 g = LocalProxy()
