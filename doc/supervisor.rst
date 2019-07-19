@@ -224,7 +224,8 @@ thread ID is being used:
 Putting own tasks in multiprocessing pool
 =========================================
 
-To put own task into multiprocessing pool, you must create tuple object which contains:
+To put own task into multiprocessing pool, you must create tuple object which
+contains:
 
 * unique task id
 * task function (static method)
@@ -238,7 +239,7 @@ To put own task into multiprocessing pool, you must create tuple object which co
 
     from atasker import TT_MP
 
-    task_id = uuid.uuid4()
+    task_id = str(uuid.uuid4())
 
     task = (
         task_id,

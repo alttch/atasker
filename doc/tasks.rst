@@ -43,3 +43,34 @@ Manual wrapping supports params:
 * **daemon** if *True*, task thread will be launched as daemon.
 * **priority** task :ref:`priority<priorities>`
 
+Multiprocessing task
+====================
+
+Run as background task
+----------------------
+
+To put task into :ref:`multiprocessing pool<create_mp_pool>`, append parameter
+*tt=TT_MP*:
+
+.. code:: python
+
+    from atasker import TASK_HIGH, TT_MP
+
+    background_task(
+        tests.mp.test, priority=TASK_HIGH, tt=TT_MP)(1,2,3)(x=2)
+
+Optional parameter *callback* can be used to specify function which handles
+task result.
+
+Run in async way
+----------------
+
+.. code:: python
+
+    from atasker import co_apply, TASK_HIGH
+
+    async def f1():
+        result = await co_apply(
+            tests.mp.test, args=(1,2,3), kwargs={'x': 2},
+            priority=TASK_HIGH)
+

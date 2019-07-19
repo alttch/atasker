@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, http://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 import threading
 import multiprocessing
@@ -207,7 +207,7 @@ class TaskSupervisor:
             if tt == TT_THREAD:
                 task.start()
             elif tt == TT_MP:
-                kw = task[3].copy()
+                kw = task[3].copy() if task[3] else {}
                 kw['_task_id'] = task[0]
                 self.mp_pool.apply_async(task[1], task[2], kw, task[4])
         time_started = time.time()
@@ -223,9 +223,10 @@ class TaskSupervisor:
         if tt == TT_THREAD:
             task.time_started = time_started
 
-    def mark_task_completed(self, task=None, tt=TT_THREAD):
+    def mark_task_completed(self, task=None, tt=None):
         with self._lock:
-            if tt == TT_THREAD:
+            if tt == TT_THREAD or not task or isinstance(
+                    task, threading.Thread):
                 if task is None:
                     task = threading.current_thread()
                 if task in self._active_threads:
@@ -234,7 +235,7 @@ class TaskSupervisor:
                         'removed task {}, thread pool size: {} / {}'.format(
                             task, len(self._active_threads),
                             self.thread_pool_size))
-            elif tt == TT_MP:
+            else:
                 if task in self._active_mps:
                     self._active_mps.remove(task)
                     logger.debug('removed task {} mp pool size: {} / {}'.format(
@@ -280,10 +281,13 @@ class TaskSupervisor:
         if self._active:
             self.event_loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.event_loop)
-            logger.info(
-                'supervisor started, thread pool: {} + {} RN + {} RH'.format(
-                    self.thread_pool_size, self.thread_reserve_normal,
-                    self.thread_reserve_high))
+            mp = ', mp pool: {} + {} RN + {} RH'.format(
+                self.mp_pool_size, self.mp_reserve_normal,
+                self.mp_reserve_high) if hasattr(self, 'mp_pool_size') else ''
+            logger.info('supervisor started, thread pool: ' +
+                        '{} + {} RN + {} RH{}'.format(
+                            self.thread_pool_size, self.thread_reserve_normal,
+                            self.thread_reserve_high, mp))
             try:
                 self._started = True
                 self.event_loop.run_until_complete(self._main_loop())

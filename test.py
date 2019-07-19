@@ -29,15 +29,12 @@ Q = Queue()
 
 c = 0
 
-task_supervisor.set_thread_pool(
-    pool_size=20, reserve_normal=0, reserve_high=0)
+task_supervisor.set_thread_pool(pool_size=20, reserve_normal=0, reserve_high=0)
 # task_supervisor.create_mp_pool()
-task_supervisor.set_mp_pool(
-    pool_size=2, reserve_normal=0, reserve_high=0)
+task_supervisor.set_mp_pool(pool_size=2, reserve_normal=0, reserve_high=0)
 task_supervisor.poll_delay = 0.01
 # task_supervisor.default_executor_loop = loop
 task_supervisor.start()
-
 
 f = TaskCollection()
 # from multiprocessing import Pool
@@ -49,6 +46,7 @@ from tests.mpworker import MPWorker
 # mpw = MPWorker(interval=0.5)
 
 # mpw.start()
+
 
 @background_worker(interval=0.5)
 def myworker(*args, **kwargs):
@@ -75,10 +73,25 @@ def e(*args, **kwargs):
 
 import asyncio
 
+import tests.mp
+
+from atasker import co_apply
+
 
 @background_worker(q=asyncio.queues.PriorityQueue, on_error=e)
-def myqueuedworker(task, **kwargs):
+async def myqueuedworker(task, **kwargs):
     print('queued worker is running, queue task: {}'.format(task))
+    try:
+        result = await co_apply(
+            tests.mp.test,
+            args=(1, 2, 3),
+            kwargs={'x': 2},
+            priority=atasker.TASK_HIGH)
+        print('RESULT: {}'.format(result))
+    except:
+        print('fucked')
+        import traceback
+        print(traceback.format_exc())
     # time.sleep(0.4)
 
 
@@ -132,7 +145,7 @@ def someworker(**kwargs):
 # task_supervisor.stop(wait=2)
 # exit()
 # myworker.start(123, x=2)
-# myqueuedworker.start()
+myqueuedworker.start()
 # myeventworker.start()
 # someworker.start()
 # w2=atasker.W2() #interval=0.1)
@@ -142,10 +155,11 @@ def someworker(**kwargs):
 # w2.put('xxx')
 # w2.put('xxx')
 # w2.put('xxx')
-# myqueuedworker.put('task1')
+myqueuedworker.put('task1')
 # myevent.set()
 # time.sleep(2)
-# myqueuedworker.put('task2')
+myqueuedworker.put('task2')
+
 # myqueuedworker.put('task3')
 # myqueuedworker.put('task4')
 # for i in range(100):
@@ -165,8 +179,21 @@ def someworker(**kwargs):
 # time.sleep(0.1)
 # myworker.stop()
 # myworker.start()
-background_task(test, name='ttt', priority=atasker.TASK_CRITICAL)()
-background_task(test, name='ttt', priority=atasker.TASK_HIGH)(1,a=2)
+
+
+def cb(result):
+    print('func result: {}'.format(result))
+
+
+# background_task(
+# tests.mp.test,
+# name='ttt',
+# priority=atasker.TASK_CRITICAL,
+# tt=atasker.TT_MP,
+# callback=cb)()
+# background_task(
+# tests.mp.test, name='ttt', priority=atasker.TASK_HIGH, tt=atasker.TT_MP)(
+# 1, x=2)
 # test()
 # test(1, a=2)
 # background_task(test, name='ttt')()

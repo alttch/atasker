@@ -110,6 +110,12 @@ can not pick execution function defined via annotation, so worker class is
 required. Create it in separate module as Python multiprocessing can not pick
 methods from the module where the worker is started:
 
+.. warning::
+
+    Multiprocessing executor function should always finish correctly, without
+    any exceptions otherwise callback function is be never called and task
+    become "freezed" in pool.
+
 *myworker.py*
 
 .. code:: python
