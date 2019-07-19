@@ -82,7 +82,7 @@ from atasker import co_mp_apply
 async def myqueuedworker(task, **kwargs):
     print('queued worker is running, queue task: {}'.format(task))
     try:
-        result = await co_apply(
+        result = await co_mp_apply(
             tests.mp.test,
             args=(1, 2, 3),
             kwargs={'x': 2},
