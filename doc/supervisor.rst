@@ -44,7 +44,7 @@ Task supervisor supports 4 task priorities:
     def test():
         pass
 
-    background_task(test, name='test', wait_start=True, priority=TASK_HIGH)()
+    background_task(test, name='test', priority=TASK_HIGH)()
 
 Pool size
 =========
