@@ -9,6 +9,7 @@ import queue
 import time
 
 from atasker import task_supervisor
+from atasker import TASK_NORMAL
 
 
 class FunctionCollection:
@@ -20,7 +21,7 @@ class FunctionCollection:
         self.on_error_kwargs = kwargs.get('on_error_kwargs', {})
         self.include_exceptions = True if kwargs.get(
             'include_exceptions') else False
-        self.default_priority = 100
+        self.default_priority = TASK_NORMAL
 
     def __call__(self, f=None, **kwargs):
 

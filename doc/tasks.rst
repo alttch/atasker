@@ -42,6 +42,7 @@ Manual wrapping supports params:
 * **name** set task thread name
 * **daemon** if *True*, task thread will be launched as daemon.
 * **priority** task :ref:`priority<priorities>`
+* **supervisor** custom :doc:`task supervisor<supervisor>`
 
 Multiprocessing task
 ====================

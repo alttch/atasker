@@ -6,3 +6,4 @@
     supervisor
     tasks
     workers
+    collections
