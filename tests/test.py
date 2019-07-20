@@ -22,7 +22,7 @@ result = SimpleNamespace(
     background_queue_worker=0,
     background_event_worker=0)
 
-sys.path.append(Path().absolute().parent.as_posix())
+sys.path.insert(0, Path().absolute().parent.as_posix())
 
 
 def wait():
