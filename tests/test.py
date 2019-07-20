@@ -10,6 +10,7 @@ import time
 from types import SimpleNamespace
 
 result = SimpleNamespace(
+    g=None,
     function_collection=0,
     task_collection=0,
     background_task_annotated=None,
@@ -36,10 +37,21 @@ from atasker import FunctionCollection, TaskCollection, g
 class Test(unittest.TestCase):
 
     def test_g(self):
+
+        @background_task
+        def f():
+            result.g = g.get('test', 222)
+            g.set('ttt', 333)
+
         g.set('test', 1)
         g.clear('test')
         g.set('test_is', g.has('test'))
         self.assertFalse(g.get('test_is'))
+        g.set('test', 999)
+        f()
+        wait()
+        self.assertIsNone(g.get('ttt'))
+        self.assertEqual(result.g, 222)
 
     def test_function_collection(self):
 
