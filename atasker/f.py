@@ -88,12 +88,13 @@ class TaskCollection(FunctionCollection):
         self.lock = threading.Lock()
         self.result_queue = queue.Queue()
         self.threads = set()
+        self.supervisor = kwargs.get('supervisor', task_supervisor)
         self.poll_delay = kwargs.get('poll_delay')
 
     def execute(self):
         with self.lock:
             poll_delay = self.poll_delay if self.poll_delay else \
-                    task_supervisor.poll_delay
+                    self.supervisor.poll_delay
             result = {}
             self.threads.clear()
             all_ok = True
@@ -103,7 +104,7 @@ class TaskCollection(FunctionCollection):
                 f = fn['f']
                 t = threading.Thread(target=self._run_task, args=(f,))
                 self.threads.add(t)
-                task_supervisor.put_task(t, fn['p'])
+                self.supervisor.put_task(t, fn['p'])
             while True:
                 try:
                     for t in self.threads:
@@ -134,4 +135,4 @@ class TaskCollection(FunctionCollection):
             self.error(e)
             ok = False
         self.result_queue.put((k, result, ok))
-        task_supervisor.mark_task_completed()
+        self.supervisor.mark_task_completed()
