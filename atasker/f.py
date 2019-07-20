@@ -13,6 +13,13 @@ from atasker import TASK_NORMAL
 
 
 class FunctionCollection:
+    """
+    Args:
+        on_error: function launched when function in collection raises an
+                  exception as on_error(e)
+        on_error_kwargs: additional kwargs for on_error function
+        include_exceptions: include exceptions into final result dict
+    """
 
     def __init__(self, **kwargs):
         self._functions = []
@@ -37,6 +44,13 @@ class FunctionCollection:
             return self.run()
 
     def append(self, f, priority=None):
+        """
+        Append function without annotation
+
+        Args:
+            f: function
+            priority: function priority
+        """
         if f not in self._functions:
             self._functions.append(f)
             self._functions_with_priorities.append({
@@ -47,15 +61,37 @@ class FunctionCollection:
             })
 
     def remove(self, f):
+        """
+        Remove function
+
+        Args:
+            f: function
+        """
         try:
             self._functions.remove(f)
         except Exception as e:
             self.error(e)
 
     def run(self):
+        """
+        Run all functions in collection
+
+        Returns:
+            result dict as
+            
+            { '<function>': '<function_return>', ... }
+        """
         return self.execute()[0]
 
     def execute(self):
+        """
+        Run all functions in collection
+
+        Returns:
+            a tuple
+            { '<function>': '<function_return>', ...}, ALL_OK
+            where ALL_OK is True if no function raised an exception
+        """
         result = {}
         all_ok = True
         funclist = sorted(self._functions_with_priorities, key=lambda k: k['p'])
@@ -83,6 +119,20 @@ class FunctionCollection:
 
 
 class TaskCollection(FunctionCollection):
+    """
+    Same as function collection, but stored functions are started as tasks in
+    threads.
+
+    Method execute() returns result when all tasks in collection are finished.
+
+    Args:
+        on_error: function launched when function in collection raises an
+                  exception as on_error(e)
+        on_error_kwargs: additional kwargs for on_error function
+        include_exceptions: include exceptions into final result dict
+        supervisor: custom task supervisor
+        poll_delay: custom poll delay
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

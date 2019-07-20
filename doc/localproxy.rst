@@ -1,8 +1,6 @@
 Thread local proxy
 ******************
 
-Simple proxy for *threading.local* namespace.
-
 .. code:: python
 
     from atasker import g
@@ -12,16 +10,6 @@ Simple proxy for *threading.local* namespace.
 
 Supports methods:
 
-.. code:: python
-
-    # returns attr value or default value if specified
-    g.get(attr, default=None)
-
-    # returns True if attribute exists
-    g.has(attr)
-
-    # set attribute value
-    g.set(attr, value)
-
-    # delete attribute
-    g.clear(attr)
+.. automodule:: atasker
+.. autoclass:: LocalProxy
+    :members:

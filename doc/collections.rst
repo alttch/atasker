@@ -8,6 +8,8 @@ functions only either in a foreground (one-by-one) or as a threads.
 Function priority can be specified either as *TASK_\** (e.g. *TASK_NORMAL*) or
 as a number (lower = higher priority).
 
+.. automodule:: atasker
+
 FunctionCollection
 ==================
 
@@ -36,19 +38,8 @@ Simple collection of functions.
 
     result, all_ok = startup.execute()
 
-Collection constructor supports following arguments:
-
-* **on_error** function launched when function in collection raises an
-  exception (as *on_error(e)*).
-* **on_error_kwargs** additional kwargs for *on_error* function.
-* **include_exceptions** include exceptions into final result dict.
-
-Collection has two method to launch stored functions:
-
-* **run** returns result dict as *{ '<function>': '<function_return>',... }*
-
-* **execute** returns a tuple: *( result, all_ok )*, where all_ok is *True* if
-  no function raised an exception.
+.. autoclass:: FunctionCollection
+    :members:
 
 TaskCollection
 ==============
@@ -56,10 +47,9 @@ TaskCollection
 Same as function collection, but stored functions are started as tasks in
 threads.
 
-Constructor supports additional arguments:
+Methods *execute()* and *run()* return result when all tasks in collection are
+finished.
 
-* **supervisor** custom task supervisor
-* **poll_delay** custom poll delay
-
-Method *execute()* returns result when all tasks in collection are finished.
-
+.. autoclass:: TaskCollection
+    :inherited-members:
+    :members:
