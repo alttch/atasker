@@ -10,6 +10,8 @@ import time
 from types import SimpleNamespace
 
 result = SimpleNamespace(
+    function_collection=0,
+    task_collection=0,
     background_task_annotated=None,
     background_task_thread=None,
     background_task_mp=None,
@@ -28,8 +30,40 @@ def wait():
 
 from atasker import task_supervisor, background_task, background_worker, TT_MP
 
+from atasker import FunctionCollection, TaskCollection
+
 
 class Test(unittest.TestCase):
+
+    def test_function_collection(self):
+
+        f = FunctionCollection()
+
+        @f
+        def f1():
+            result.function_collection += 1
+
+        @f
+        def f2():
+            result.function_collection += 2
+
+        f.run()
+        self.assertEqual(result.function_collection, 3)
+
+    def test_task_collection(self):
+
+        f = TaskCollection()
+
+        @f
+        def f1():
+            result.task_collection += 1
+
+        @f
+        def f2():
+            result.task_collection += 2
+
+        f.run()
+        self.assertEqual(result.task_collection, 3)
 
     def test_background_task_annotated(self):
 
