@@ -214,7 +214,7 @@ BackgroundQueueWorker
 ---------------------
 
 Background worker which gets data from asynchronous queue and passes it to
-synchronous executor.
+synchronous or Asynchronous executor.
 
 Queue worker is created as soon as annotator detects *q=True* or *queue=True*
 param. Default queue is *asyncio.queues.Queue*. If you want to use e.g.
