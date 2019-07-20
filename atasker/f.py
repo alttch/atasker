@@ -69,6 +69,10 @@ class FunctionCollection:
         """
         try:
             self._functions.remove(f)
+            for z in self._functions_with_priorities:
+                if z['f'] is f:
+                    self._functions_with_priorities.remove(z)
+                    break
         except Exception as e:
             self.error(e)
 
