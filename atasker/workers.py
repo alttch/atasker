@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, http://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.6"
+__version__ = "0.2.7"
 
 import threading
 import logging
@@ -119,7 +119,7 @@ class BackgroundWorker:
                 kw['o'] = self.o
             self._task_args = args
             self._task_kwargs = kw
-            self._start()
+            self._start(*args, **kwargs)
             while not self._started:
                 time.sleep(self.poll_delay)
             self.after_start()
@@ -258,11 +258,15 @@ class BackgroundAsyncWorker(BackgroundWorker):
             self._send_executor_stop_event()
 
     async def _run_coroutine(self, *args, **kwargs):
-        if await self.run(*(args + self._task_args), **
-                          self._task_kwargs) is False:
-            self._abort()
-        self._current_executor = None
-        self._send_executor_stop_event()
+        try:
+            if await self.run(*(args + self._task_args), **
+                              self._task_kwargs) is False:
+                self._abort()
+        except Exception as e:
+            self.error(e)
+        finally:
+            self._current_executor = None
+            self._send_executor_stop_event()
 
     def _send_executor_stop_event(self):
         asyncio.run_coroutine_threadsafe(
@@ -280,8 +284,12 @@ class BackgroundAsyncWorker(BackgroundWorker):
                     self._run_coroutine(*args), loop=self.executor_loop)
                 return True
             else:
-                result = await self.run(*(args + self._task_args),
-                                        **self._task_kwargs)
+                try:
+                    result = await self.run(*(args + self._task_args),
+                                            **self._task_kwargs)
+                except Exception as e:
+                    self.error(e)
+                    result = None
             self._current_executor = None
             return result is not False and self._active
         elif self._run_in_mp:
