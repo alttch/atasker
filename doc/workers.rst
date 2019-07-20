@@ -257,7 +257,7 @@ BackgroundEventWorker
 ---------------------
 
 Background worker which runs asynchronous loop waiting for the event and
-launches synchronous executor when it's happened.
+launches synchronous or asynchronous executor when it's happened.
 
 Event worker is created as soon as annotator detects *e=True* or *event=True*
 param.
