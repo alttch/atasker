@@ -292,14 +292,14 @@ thread-safe.
 BackgroundIntervalWorker
 ------------------------
 
-Background worker which runs synchronous executor function but has asynchronous
-loop.
+Background worker which runs synchronous or asynchronous executor function with
+the specified interval or delay.
 
 Worker initial parameters:
 
 * **interval** run executor with a specified interval (in seconds)
-* **delay** delay between launches
-* **delay_before** delay before executor launch
+* **delay** delay *between* executor launches
+* **delay_before** delay *before* executor launch
 
 Parameters *interval* and *delay* can not be used together. All parameters can
 be overriden during startup by adding *_* prefix (e.g.
