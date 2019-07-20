@@ -30,10 +30,16 @@ def wait():
 
 from atasker import task_supervisor, background_task, background_worker, TT_MP
 
-from atasker import FunctionCollection, TaskCollection
+from atasker import FunctionCollection, TaskCollection, g
 
 
 class Test(unittest.TestCase):
+
+    def test_g(self):
+        g.set('test', 1)
+        g.clear('test')
+        g.set('test_is', g.has('test'))
+        self.assertFalse(g.get('test_is'))
 
     def test_function_collection(self):
 

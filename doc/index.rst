@@ -7,3 +7,4 @@
     tasks
     workers
     collections
+    localproxy
