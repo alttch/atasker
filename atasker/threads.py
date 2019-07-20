@@ -32,10 +32,10 @@ class LocalProxy(threading.local):
 
 def background_task(f, *args, **kwargs):
 
-    def gen_mp_callback(task_id, callback):
+    def gen_mp_callback(task_id, callback, supervisor):
 
         def cbfunc(*args, **kwargs):
-            task_supervisor.mark_task_completed(task_id)
+            supervisor.mark_task_completed(task_id)
             if callable(callback):
                 callback(*args, **kwargs)
 
@@ -44,22 +44,24 @@ def background_task(f, *args, **kwargs):
     @wraps(f)
     def start_task(*args, **kw):
         tt = kwargs.get('tt', TT_THREAD)
+        supervisor = kwargs.get('supervisor', task_supervisor)
         if tt == TT_THREAD:
             t = threading.Thread(
                 group=kwargs.get('group'),
                 target=_background_task_thread_runner,
                 name=kwargs.get('name'),
-                args=(f,) + args,
+                args=(f, supervisor) + args,
                 kwargs=kw)
             if kwargs.get('daemon'): t.setDaemon(True)
-            task_supervisor.put_task(t, kwargs.get('priority', TASK_NORMAL),
-                                     kwargs.get('delay'))
+            supervisor.put_task(t, kwargs.get('priority', TASK_NORMAL),
+                                kwargs.get('delay'))
             return t
         elif tt == TT_MP:
             task_id = str(uuid.uuid4())
             task = (task_id, f, args, kw,
-                    gen_mp_callback(task_id, kwargs.get('callback')))
-            task_supervisor.put_task(
+                    gen_mp_callback(task_id, kwargs.get('callback'),
+                                    supervisor))
+            supervisor.put_task(
                 task,
                 kwargs.get('priority', TASK_NORMAL),
                 kwargs.get('delay'),
@@ -68,8 +70,8 @@ def background_task(f, *args, **kwargs):
     return start_task
 
 
-def _background_task_thread_runner(f, *args, **kwargs):
+def _background_task_thread_runner(f, supervisor, *args, **kwargs):
     try:
         f(*args, **kwargs)
     finally:
-        task_supervisor.mark_task_completed()
+        supervisor.mark_task_completed()

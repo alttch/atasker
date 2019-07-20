@@ -6,21 +6,26 @@ import uuid
 import asyncio
 
 
-async def co_mp_apply(f, args=(), kwargs={}, priority=TASK_NORMAL, delay=None):
+async def co_mp_apply(f,
+                      args=(),
+                      kwargs={},
+                      priority=TASK_NORMAL,
+                      delay=None,
+                      supervisor=None):
 
     class CO:
 
         async def run(self, *args, **kwargs):
             self._event = asyncio.Event()
             task = (self.task_id, self.func, args, kwargs, self.callback)
-            return task_supervisor.put_task(
+            return self.supervisor.put_task(
                 task, self.priority, self.delay, tt=TT_MP)
 
         async def _set_event(self):
             self._event.set()
 
         def callback(self, result):
-            task_supervisor.mark_task_completed(self.task_id)
+            self.supervisor.mark_task_completed(self.task_id)
             self._result = result
             asyncio.run_coroutine_threadsafe(self._set_event(), loop=self._loop)
 
@@ -33,6 +38,7 @@ async def co_mp_apply(f, args=(), kwargs={}, priority=TASK_NORMAL, delay=None):
     co.task_id = str(uuid.uuid4())
     co.priority = priority
     co.delay = delay
+    co.supervisor = supervisor if supervisor else task_supervisor
     co.func = f
     co._loop = asyncio.get_event_loop()
     if not await co.run(args, kwargs):
