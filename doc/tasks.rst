@@ -57,7 +57,7 @@ To put task into :ref:`multiprocessing pool<create_mp_pool>`, append parameter
     from atasker import TASK_HIGH, TT_MP
 
     background_task(
-        tests.mp.test, priority=TASK_HIGH, tt=TT_MP)(1,2,3)(x=2)
+        tests.mp.test, priority=TASK_HIGH, tt=TT_MP)(1, 2, 3, x=2)
 
 Optional parameter *callback* can be used to specify function which handles
 task result.
