@@ -260,21 +260,24 @@ class TaskSupervisor:
         logger.info('supervisor event loop started')
         while self._main_loop_active:
             data = await self._Q.get()
-            if data is None: break
-            r, res, t_put = data
-            if r == RQ_SCHEDULER:
-                logger.debug('Supervisor: new scheduler {}'.format(res))
-                scheduler_task = self.event_loop.create_task(res.loop())
-                if hasattr(res, 'extra_loops'):
-                    for l in res.extra_loops:
-                        self.event_loop.create_task(getattr(res, l)())
-                with self._lock:
-                    self._schedulers[res] = (res, scheduler_task)
-            elif r == RQ_TASK:
-                logger.debug('Supervisor: new task {}'.format(res))
-                tt, target, priority, delay = res
-                self.event_loop.create_task(
-                    self._start_task(tt, target, priority, t_put, delay))
+            try:
+                if data is None: break
+                r, res, t_put = data
+                if r == RQ_SCHEDULER:
+                    logger.debug('Supervisor: new scheduler {}'.format(res))
+                    scheduler_task = self.event_loop.create_task(res.loop())
+                    if hasattr(res, 'extra_loops'):
+                        for l in res.extra_loops:
+                            self.event_loop.create_task(getattr(res, l)())
+                    with self._lock:
+                        self._schedulers[res] = (res, scheduler_task)
+                elif r == RQ_TASK:
+                    logger.debug('Supervisor: new task {}'.format(res))
+                    tt, target, priority, delay = res
+                    self.event_loop.create_task(
+                        self._start_task(tt, target, priority, t_put, delay))
+            finally:
+                self._Q.task_done()
         logger.info('supervisor event loop finished')
 
     def _start_event_loop(self):

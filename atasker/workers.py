@@ -288,8 +288,8 @@ class BackgroundAsyncWorker(BackgroundWorker):
             task_id = uuid.uuid4()
             self._current_executor = task_id
             return self.supervisor.put_task(
-                (task_id, self.run, args + self._task_args,
-                 self._task_kwargs, self._cb_mp),
+                (task_id, self.run, args + self._task_args, self._task_kwargs,
+                 self._cb_mp),
                 self.priority,
                 tt=TT_MP) and self._active
         else:
@@ -332,16 +332,19 @@ class BackgroundQueueWorker(BackgroundAsyncWorker):
         self.mark_started()
         while self._active:
             task = await self._Q.get()
-            if self._current_executor:
-                await self._executor_stop_event.wait()
-                self._executor_stop_event.clear()
-            if self._active and task is not None:
-                if not await self.launch_executor(task):
+            try:
+                if self._current_executor:
+                    await self._executor_stop_event.wait()
+                    self._executor_stop_event.clear()
+                if self._active and task is not None:
+                    if not await self.launch_executor(task):
+                        break
+                else:
                     break
-            else:
-                break
-            if not self._suppress_sleep:
-                await asyncio.sleep(self.supervisor.poll_delay)
+                if not self._suppress_sleep:
+                    await asyncio.sleep(self.supervisor.poll_delay)
+            finally:
+                self._Q.task_done()
         self.mark_stopped()
 
     def get_queue_obj(self):
