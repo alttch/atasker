@@ -15,8 +15,8 @@ from atasker import TASK_NORMAL
 class FunctionCollection:
     """
     Args:
-        on_error: function launched when function in collection raises an
-                  exception as on_error(e)
+        on_error: function, launched when function in collection raises an
+                    exception
         on_error_kwargs: additional kwargs for on_error function
         include_exceptions: include exceptions into final result dict
     """
@@ -130,10 +130,6 @@ class TaskCollection(FunctionCollection):
     Method execute() returns result when all tasks in collection are finished.
 
     Args:
-        on_error: function launched when function in collection raises an
-                  exception as on_error(e)
-        on_error_kwargs: additional kwargs for on_error function
-        include_exceptions: include exceptions into final result dict
         supervisor: custom task supervisor
         poll_delay: custom poll delay
     """

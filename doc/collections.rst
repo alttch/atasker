@@ -53,3 +53,4 @@ finished.
 .. autoclass:: TaskCollection
     :inherited-members:
     :members:
+    :show-inheritance:
