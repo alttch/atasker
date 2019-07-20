@@ -45,10 +45,10 @@ Collection constructor supports following arguments:
 
 Collection has two method to launch stored functions:
 
-* **run** returns result dict as { '<function>': '<function_return>',... }
+* **run** returns result dict as *{ '<function>': '<function_return>',... }*
 
-* **execute** returns a tuple: ( result, all_ok ), where all_ok is *True* if no
-  function raised an exception.
+* **execute** returns a tuple: *( result, all_ok )*, where all_ok is *True* if
+  no function raised an exception.
 
 TaskCollection
 ==============
