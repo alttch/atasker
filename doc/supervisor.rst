@@ -191,7 +191,7 @@ Custom task supervisor
 Putting own threads
 ===================
 
-If you can not use :doc:`background tasks<tasks>` for some reason, You may
+If you can not use :doc:`background tasks<tasks>` for some reason, you may
 create *threading.Thread* object manually and put it to task supervisor to
 launch:
 
