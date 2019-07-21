@@ -9,7 +9,7 @@ import asyncio
 async def co_mp_apply(f,
                       args=(),
                       kwargs={},
-                      priority=TASK_NORMAL,
+                      priority=None,
                       delay=None,
                       supervisor=None):
     """
@@ -19,7 +19,7 @@ async def co_mp_apply(f,
         f: module.function (function must be located in external module)
         args: function arguments
         kwargs: function keyword arguments
-        priority: task :ref:`priority<priorities>`
+        priority: task :ref:`priority<priorities>` (default: TASK_NORMAL)
         delay: delay before execution
         supervisor: custom :doc:`task supervisor<supervisor>`
     """
@@ -47,7 +47,7 @@ async def co_mp_apply(f,
 
     co = CO()
     co.task_id = str(uuid.uuid4())
-    co.priority = priority
+    co.priority = priority if priority is not None else TASK_NORMAL
     co.delay = delay
     co.supervisor = supervisor if supervisor else task_supervisor
     co.func = f
