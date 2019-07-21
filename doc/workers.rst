@@ -113,8 +113,8 @@ methods from the module where the worker is started:
 .. warning::
 
     Multiprocessing executor function should always finish correctly, without
-    any exceptions otherwise callback function is be never called and task
-    become "freezed" in pool.
+    any exceptions otherwise callback function is never called and task become
+    "freezed" in pool.
 
 *myworker.py*
 

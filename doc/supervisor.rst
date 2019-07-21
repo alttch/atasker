@@ -100,7 +100,7 @@ thread, you may use method
 
     task_supervisor.block()
 
-which will just sleep until task supervisor is active.
+which will just sleep while task supervisor is active.
 
 Timeouts
 ========
