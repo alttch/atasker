@@ -36,13 +36,8 @@ To start task function without annotation, you must manually decorate it:
 
     background_task(mytask, name='mytask', priority=TASK_LOW)()
 
-Manual wrapping supports params:
-
-* **group** put task thread in the specified group
-* **name** set task thread name
-* **daemon** if *True*, task thread will be launched as daemon.
-* **priority** task :ref:`priority<priorities>`
-* **supervisor** custom :doc:`task supervisor<supervisor>`
+.. automodule:: atasker
+.. autofunction:: background_task
 
 Multiprocessing task
 ====================
@@ -75,3 +70,4 @@ Run in async way
             tests.mp.test, args=(1,2,3), kwargs={'x': 2},
             priority=TASK_HIGH)
 
+.. autofunction:: co_mp_apply

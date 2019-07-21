@@ -66,6 +66,19 @@ class LocalProxy(threading.local):
 
 
 def background_task(f, *args, **kwargs):
+    """
+    Wrap function to a task
+
+    Args:
+        f: task function
+        group: put task thread in the specified group
+        name: set task thread name (default: function name)
+        daemon: if True, task thread will be launched as daemon
+        priority: task :ref:`priority<priorities>`
+        supervisor: custom :doc:`task supervisor<supervisor>`
+        tt: TT_THREAD (default) or TT_MP
+        callback: callback function for TT_MP
+    """
 
     def gen_mp_callback(task_id, callback, supervisor):
 

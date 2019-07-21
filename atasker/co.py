@@ -12,6 +12,17 @@ async def co_mp_apply(f,
                       priority=TASK_NORMAL,
                       delay=None,
                       supervisor=None):
+    """
+    Async task execution inside multiprocessing pool
+
+    Args:
+        f: module.function (function must be located in external module)
+        args: function arguments
+        kwargs: function keyword arguments
+        priority: task :ref:`priority<priorities>`
+        delay: delay before execution
+        supervisor: custom :doc:`task supervisor<supervisor>`
+    """
 
     class CO:
 
