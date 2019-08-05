@@ -10,12 +10,18 @@ Locker helper/decorator
         import os, signal
         os.kill(os.getpid(), signal.SIGKILL)
 
-    with_lock1 = Locker(mod='main', timeout=5)
-    with_lock1.critical = critical_exception
+    lock1 = Locker(mod='main', timeout=5)
+    lock1.critical = critical_exception
+
+    # use as decorator
 
     @with_lock1
     def test():
-        # thread-safe access to resources locked with with_lock1
+        # thread-safe access to resources locked with lock1
+
+    # with
+    with lock1:
+        # thread-safe access to resources locked with lock1
 
 
 Supports methods:

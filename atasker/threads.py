@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, http://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.9"
+__version__ = "0.2.10"
 
 import threading
 import time
@@ -76,10 +76,10 @@ class Locker:
         relative: True for RLock (default), False for Lock
     """
 
-    def __init__(self, mod='', timeout=5, relative=True):
+    def __init__(self, mod='main', timeout=5, relative=True):
         self.lock = threading.RLock() if relative else threading.Lock()
         self.logger = logging.getLogger('atasker/locker')
-        self.mod = '' if not mod else mod + '/'
+        self.mod = mod
         self.relative = relative
         self.timeout = timeout
 
@@ -88,7 +88,7 @@ class Locker:
         @wraps(f)
         def do(*args, **kwargs):
             if not self.lock.acquire(timeout=self.timeout):
-                self.logger.critical('{}{} locking broken'.format(
+                self.logger.critical('{}/{} locking broken'.format(
                     self.mod, f.__name__))
                 self.critical()
                 return None
@@ -98,6 +98,19 @@ class Locker:
                 self.lock.release()
 
         return do
+
+    def __enter__(self):
+        """
+        Raises:
+            TimeoutError: if lock not acquired
+        """
+        if not self.lock.acquire(timeout=self.timeout):
+            self.logger.critical('{} locking broken'.format(self.mod))
+            self.critical()
+            raise TimeoutError
+
+    def __exit__(self, *args, **kwargs):
+        self.lock.release()
 
     def critical(self):
         """
