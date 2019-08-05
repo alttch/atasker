@@ -14,8 +14,7 @@ Locker helper/decorator
     lock1.critical = critical_exception
 
     # use as decorator
-
-    @with_lock1
+    @lock1
     def test():
         # thread-safe access to resources locked with lock1
 
