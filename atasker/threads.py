@@ -1,11 +1,12 @@
 __author__ = "Altertech Group, http://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.8"
+__version__ = "0.2.9"
 
 import threading
 import time
 import uuid
+import logging
 
 from functools import wraps
 
@@ -63,6 +64,46 @@ class LocalProxy(threading.local):
             attr: attribute name
         """
         return delattr(self, attr) if hasattr(self, attr) else True
+
+
+class Locker:
+    """
+    Locker helper/decorator
+
+    Args:
+        mod: module name (for logging only)
+        timeout: max lock timeout before critical (default: 5 sec)
+        relative: True for RLock (default), False for Lock
+    """
+
+    def __init__(self, mod='', timeout=5, relative=True):
+        self.lock = threading.RLock() if relative else threading.Lock()
+        self.logger = logging.getLogger('atasker/locker')
+        self.mod = '' if not mod else mod + '/'
+        self.relative = relative
+        self.timeout = timeout
+
+    def __call__(self, f):
+
+        @wraps(f)
+        def do(*args, **kwargs):
+            if not self.lock.acquire(timeout=self.timeout):
+                self.logger.critical('{}{} locking broken'.format(
+                    self.mod, f.__name__))
+                self.critical()
+                return None
+            try:
+                return f(*args, **kwargs)
+            finally:
+                self.lock.release()
+
+        return do
+
+    def critical(self):
+        """
+        Override this
+        """
+        pass
 
 
 def background_task(f, *args, **kwargs):

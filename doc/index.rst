@@ -8,3 +8,4 @@
     workers
     collections
     localproxy
+    locker

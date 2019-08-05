@@ -20,7 +20,9 @@ result = SimpleNamespace(
     background_interval_worker=0,
     background_interval_worker_async_ex=0,
     background_queue_worker=0,
-    background_event_worker=0)
+    background_event_worker=0,
+    locker_success=False,
+    locker_failed=False)
 
 sys.path.insert(0, Path().absolute().parent.as_posix())
 
@@ -32,6 +34,8 @@ def wait():
 from atasker import task_supervisor, background_task, background_worker, TT_MP
 
 from atasker import FunctionCollection, TaskCollection, g
+
+from atasker import Locker
 
 
 class Test(unittest.TestCase):
@@ -185,6 +189,24 @@ class Test(unittest.TestCase):
         t.stop()
         self.assertLess(t.a, 10)
         self.assertGreater(t.a, 4)
+
+    def test_locker(self):
+
+        with_lock = Locker(
+            mod='test (broken is fine!)', relative=False, timeout=0.5)
+
+        @with_lock
+        def test_locker():
+            result.locker_failed = True
+
+        def locker_ok():
+            result.locker_success = True
+
+        with_lock.critical = locker_ok
+        with_lock.lock.acquire()
+        test_locker()
+        self.assertTrue(result.locker_success)
+        self.assertFalse(result.locker_failed)
 
 
 task_supervisor.set_thread_pool(pool_size=20, reserve_normal=5, reserve_high=5)
