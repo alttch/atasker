@@ -34,6 +34,13 @@ All workers support the following initial parameters:
 
 * **poll_delay** worker poll delay (default: task supervisor poll delay)
 
+Methods
+-------
+
+.. automodule:: atasker
+.. autoclass:: BackgroundWorker
+    :members:
+
 Overriding parameters at startup
 --------------------------------
 
