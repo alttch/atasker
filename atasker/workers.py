@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.10"
+__version__ = "0.2.11"
 
 import threading
 import logging
@@ -380,6 +380,8 @@ class BackgroundQueueWorker(BackgroundAsyncWorker):
 class BackgroundEventWorker(BackgroundAsyncWorker):
 
     def trigger(self):
+        if self._current_executor:
+            return
         asyncio.run_coroutine_threadsafe(
             self._set_event(), loop=self.supervisor.event_loop)
 
