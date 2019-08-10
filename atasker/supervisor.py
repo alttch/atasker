@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.11"
+__version__ = "0.2.12"
 
 import threading
 import multiprocessing
@@ -54,7 +54,7 @@ class TaskSupervisor:
         self._active_mps = set()
         self._active = False
         self._main_loop_active = False
-        self._started = False
+        self._started = threading.Event()
         self._lock = threading.Lock()
         self._max_threads = {}
         self._max_mps = {}
@@ -107,7 +107,7 @@ class TaskSupervisor:
             return False
 
     def put_task(self, task, priority=TASK_NORMAL, delay=None, tt=TT_THREAD):
-        if not self._started:
+        if not self._started.is_set():
             return False
         asyncio.run_coroutine_threadsafe(
             self._Q.put((RQ_TASK, (tt, task, priority, delay), time.time())),
@@ -122,7 +122,7 @@ class TaskSupervisor:
                 processes=multiprocessing.cpu_count())
 
     def register_scheduler(self, scheduler):
-        if not self._started:
+        if not self._started.is_set():
             return False
         asyncio.run_coroutine_threadsafe(
             self._Q.put((RQ_SCHEDULER, scheduler, time.time())),
@@ -248,8 +248,7 @@ class TaskSupervisor:
         t = threading.Thread(
             name='supervisor_event_loop', target=self._start_event_loop)
         t.start()
-        while not self._started:
-            time.sleep(self.poll_delay)
+        self._started.wait()
 
     def block(self):
         while self._active:
@@ -257,6 +256,7 @@ class TaskSupervisor:
 
     async def _main_loop(self):
         self._Q = asyncio.queues.Queue()
+        self._started.set()
         logger.info('supervisor event loop started')
         while self._main_loop_active:
             data = await self._Q.get()
@@ -292,7 +292,6 @@ class TaskSupervisor:
                             self.thread_pool_size, self.thread_reserve_normal,
                             self.thread_reserve_high, mp))
             try:
-                self._started = True
                 self.event_loop.run_until_complete(self._main_loop())
             except CancelledError:
                 logger.warning('supervisor loop had active tasks')
@@ -348,5 +347,5 @@ class TaskSupervisor:
                             break
                     if can_break: break
                 time.sleep(self.poll_delay)
-        self._started = False
+        self._started.clear()
         logger.info('supervisor stopped')

@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.11"
+__version__ = "0.2.12"
 
 import threading
 import logging
@@ -379,8 +379,8 @@ class BackgroundQueueWorker(BackgroundAsyncWorker):
 
 class BackgroundEventWorker(BackgroundAsyncWorker):
 
-    def trigger(self):
-        if self._current_executor:
+    def trigger(self, force=False):
+        if self._current_executor and not force:
             return
         asyncio.run_coroutine_threadsafe(
             self._set_event(), loop=self.supervisor.event_loop)
@@ -405,7 +405,7 @@ class BackgroundEventWorker(BackgroundAsyncWorker):
 
     def send_stop_events(self, *args, **kwargs):
         try:
-            self.trigger()
+            self.trigger(force=True)
         except:
             pass
 
