@@ -157,6 +157,17 @@ class TaskSupervisor:
         elif tt == TT_MP:
             return len(self._active_mps)
 
+    def get_stats(self):
+        result = {}
+        for p in ['pool_size', 'reserve_normal', 'reserve_high']:
+            result['thread_' + p] = getattr(self, 'thread_' + p)
+            if self.mp_pool:
+                result['mp_' + p] = getattr(self, 'mp_' + p)
+        with self._lock:
+            result['threads'] = list(self._active_threads)
+            result['mps'] = list(self._active_mps)
+        return result
+
     async def _start_task(self,
                           tt,
                           task,

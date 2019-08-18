@@ -51,13 +51,13 @@ from tests.mpworker import MPWorker
 @background_worker(interval=0.5)
 def myworker(*args, **kwargs):
     global c
-    print('worker is running')
-    print(args)
-    print(kwargs)
+    # print('worker is running')
+    # print(args)
+    # print(kwargs)
     c += 1
-    time.sleep(0.1)
-    print(c)
-    return False
+    time.sleep(0.3)
+    # print(c)
+    # return False
 
 
 # task_supervisor.mp_pool.apply_async(myworker)
@@ -144,7 +144,7 @@ def someworker(**kwargs):
 # time.sleep(1)
 # task_supervisor.stop(wait=2)
 # exit()
-# myworker.start(123, x=2)
+myworker.start(123, x=2)
 myqueuedworker.start()
 # myeventworker.start()
 # someworker.start()
@@ -219,7 +219,9 @@ print('waiting...')
 # myworker.stop(wait=True)
 # someworker.stop(wait=True)
 # print('worker stopped')
-time.sleep(3)
+for x in range(0,30):
+    print(task_supervisor.get_stats())
+    time.sleep(0.1)
 # task_supervisor.block()
 # loop.run_forever()
 task_supervisor.stop(wait=2)
