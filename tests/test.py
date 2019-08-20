@@ -14,20 +14,19 @@ import time
 
 from types import SimpleNamespace
 
-result = SimpleNamespace(
-    g=None,
-    function_collection=0,
-    task_collection=0,
-    background_task_annotated=None,
-    background_task_thread=None,
-    background_task_mp=None,
-    background_worker=0,
-    background_interval_worker=0,
-    background_interval_worker_async_ex=0,
-    background_queue_worker=0,
-    background_event_worker=0,
-    locker_success=False,
-    locker_failed=False)
+result = SimpleNamespace(g=None,
+                         function_collection=0,
+                         task_collection=0,
+                         background_task_annotated=None,
+                         background_task_thread=None,
+                         background_task_mp=None,
+                         background_worker=0,
+                         background_interval_worker=0,
+                         background_interval_worker_async_ex=0,
+                         background_queue_worker=0,
+                         background_event_worker=0,
+                         locker_success=False,
+                         locker_failed=False)
 
 sys.path.insert(0, Path().absolute().parent.as_posix())
 
@@ -197,8 +196,9 @@ class Test(unittest.TestCase):
 
     def test_locker(self):
 
-        with_lock = Locker(
-            mod='test (broken is fine!)', relative=False, timeout=0.5)
+        with_lock = Locker(mod='test (broken is fine!)',
+                           relative=False,
+                           timeout=0.5)
 
         @with_lock
         def test_locker():
@@ -212,6 +212,12 @@ class Test(unittest.TestCase):
         test_locker()
         self.assertTrue(result.locker_success)
         self.assertFalse(result.locker_failed)
+
+    def test_supervisor(self):
+        result = task_supervisor.get_stats()
+
+        self.assertEqual(len(result['threads']), 0)
+        self.assertEqual(len(result['mps']), 0)
 
 
 task_supervisor.set_thread_pool(pool_size=20, reserve_normal=5, reserve_high=5)
