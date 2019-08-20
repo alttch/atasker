@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.15"
+__version__ = "0.2.16"
 
 import threading
 import multiprocessing
@@ -66,6 +66,7 @@ class TaskSupervisor:
         self._task_info = {}
         self.default_async_executor_loop = None
         self.mp_pool = None
+        self.daemon = False
 
         self.set_thread_pool(pool_size=thread_pool_default_size,
                              reserve_normal=default_reserve_normal,
@@ -289,7 +290,8 @@ class TaskSupervisor:
         self._active = True
         self._main_loop_active = True
         t = threading.Thread(name='supervisor_event_loop',
-                             target=self._start_event_loop)
+                             target=self._start_event_loop,
+                             daemon=self.daemon)
         t.start()
         self._started.wait()
 
