@@ -9,7 +9,6 @@ import time
 import logging
 import asyncio
 import uuid
-import copy
 
 from concurrent.futures import CancelledError
 
@@ -36,6 +35,16 @@ default_reserve_high = 5
 
 default_timeout_warning = 5
 default_timeout_critical = 10
+
+
+class TaskInfo:
+
+    def __init__(self, tt, task_id, priority):
+        self.tt = tt
+        self.id = task_id
+        self.priority = priority
+        self.time_queued = None
+        self.time_started = None
 
 
 class TaskSupervisor:
@@ -65,7 +74,7 @@ class TaskSupervisor:
         self._schedulers = {}
         self._thread_queue = {TASK_LOW: [], TASK_NORMAL: [], TASK_HIGH: []}
         self._mp_queue = {TASK_LOW: [], TASK_NORMAL: [], TASK_HIGH: []}
-        self._task_info = {}  # deep copied, should not contain complex objects
+        self._task_info = {}
         self.default_async_executor_loop = None
         self.mp_pool = None
         self.daemon = False
@@ -123,14 +132,11 @@ class TaskSupervisor:
             return
         if tt == TT_THREAD:
             task._atask_id = task_id
+        ti = TaskInfo(tt, task_id, priority)
+        ti.tt = tt,
+        ti.time_queued = time.time(),
         with self._lock:
-            self._task_info[task_id] = {
-                'id': task_id,
-                'priority': priority,
-                'tt': tt,
-                't_q': time.time(),
-                't_s': None
-            }
+            self._task_info[task_id] = ti
             if tt == TT_THREAD:
                 self._waiting_threads_by_t.add(task)
         asyncio.run_coroutine_threadsafe(self._Q.put(
@@ -181,7 +187,7 @@ class TaskSupervisor:
         elif tt == TT_MP:
             return len(self._active_mps)
 
-    def get_stats(self):
+    def get_stats(self, tt=None):
 
         class SupervisorStats:
             pass
@@ -189,18 +195,24 @@ class TaskSupervisor:
         result = SupervisorStats()
         with self._lock:
             for p in ['pool_size', 'reserve_normal', 'reserve_high']:
-                setattr(result, 'thread_' + p, getattr(self, 'thread_' + p))
-                if self.mp_pool:
+                if tt == TT_THREAD or tt is None:
+                    setattr(result, 'thread_' + p, getattr(self, 'thread_' + p))
+                if self.mp_pool and (tt == TT_MP or tt is None):
                     setattr(result, 'mp_' + p, getattr(self, 'mp_' + p))
-            result.thread_tasks = list(self._active_threads)
-            result.threads_active = list(self._active_threads_by_t)
-            result.threads_waiting = list(self._waiting_threads_by_t)
-            result.mp_tasks = list(self._active_mps)
-            result.thread_tasks_count = len(result.thread_tasks)
-            result.mp_tasks_count = len(result.mp_tasks)
-            result.thread_queue = self._thread_queue.copy()
-            result.mp_queue = self._mp_queue.copy()
-            result.task_info = copy.deepcopy(self._task_info)
+            if tt == TT_THREAD or tt is None:
+                result.thread_tasks = list(self._active_threads)
+                result.threads_active = list(self._active_threads_by_t)
+                result.threads_waiting = list(self._waiting_threads_by_t)
+                result.thread_tasks_count = len(result.thread_tasks)
+                result.thread_queue = self._thread_queue.copy()
+            if tt == TT_MP or tt is None:
+                result.mp_tasks = list(self._active_mps)
+                result.mp_tasks_count = len(result.mp_tasks)
+                result.mp_queue = self._mp_queue.copy()
+            result.task_info = []
+            for n, v in self._task_info.items():
+                if tt is None or v.tt == tt:
+                    result.task_info.append(v)
         return result
 
     async def _start_task(self,
@@ -254,7 +266,7 @@ class TaskSupervisor:
                 pass
         if delay:
             await asyncio.sleep(delay)
-        self._task_info[task_id]['t_s'] = time.time()
+        self._task_info[task_id].time_started = time.time()
         if self._active:
             if tt == TT_THREAD:
                 task.start()
