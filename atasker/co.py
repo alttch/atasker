@@ -51,12 +51,10 @@ async def co_mp_apply(f,
             return self._result
 
     co = CO()
-    co.task_id = str(uuid.uuid4())
     co.priority = priority if priority is not None else TASK_NORMAL
     co.delay = delay
     co.supervisor = supervisor if supervisor else task_supervisor
     co.func = f
     co._loop = asyncio.get_event_loop()
-    if not await co.run(args, kwargs):
-        return None
-    return await co.get_result()
+    co.task_id = await co.run(args, kwargs)
+    return await co.get_result() if co.task_id else None

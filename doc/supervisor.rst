@@ -198,7 +198,7 @@ launch:
 .. code:: python
 
     t = threading.Thread(target=myfunc)
-    task_supervisor.put_task(t, priority=TASK_NORMAL, delay=None)
+    task_id = task_supervisor.put_task(t, priority=TASK_NORMAL, delay=None)
 
 If *delay* is specified, the thread is started after the corresponding delay
 (seconds).
@@ -207,10 +207,9 @@ After the function thread is finished, it should notify task supervisor:
 
 .. code:: python
 
-    task_supervisor.mark_task_completed(task=None)
+    task_supervisor.mark_task_completed(task_id=task_id)
 
-Where *task* - thread object which is finished. If no object specified, current
-thread ID is being used:
+If no *task_id* specified, current thread ID is being used:
 
 .. code:: python
 
@@ -220,6 +219,11 @@ thread ID is being used:
 
     t = threading.Thread(target=mytask)
     task_supervisor.put_task(t)
+
+.. note::
+
+   If you need to know task id, before task is put (e.g. for task callback),
+   you may generate own and call *put_task* with *task_id=task_id* parameter.
 
 Putting own tasks in multiprocessing pool
 =========================================
@@ -239,23 +243,20 @@ contains:
 
     from atasker import TT_MP
 
-    task_id = str(uuid.uuid4())
-
     task = (
-        task_id,
         <somemodule.staticmethod>,
         args,
         kwargs,
         callback
     )
 
-    task_supervisor.put_task(task, tt=TT_MP)
+    task_id = task_supervisor.put_task(task, tt=TT_MP)
 
 After the function is finished, you should notify task supervisor:
 
 .. code:: python
 
-    task_supervisor.mark_task_completed(task=<task_id>, tt=TT_MP)
+    task_supervisor.mark_task_completed(task_id=<task_id>, tt=TT_MP)
 
 Creating own schedulers
 =======================

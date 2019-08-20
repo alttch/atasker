@@ -137,7 +137,7 @@ def background_task(f, *args, **kwargs):
     def gen_mp_callback(task_id, callback, supervisor):
 
         def cbfunc(*args, **kwargs):
-            supervisor.mark_task_completed(task_id)
+            supervisor.mark_task_completed(task_id=task_id)
             if callable(callback):
                 callback(*args, **kwargs)
 
@@ -148,26 +148,25 @@ def background_task(f, *args, **kwargs):
         tt = kwargs.get('tt', TT_THREAD)
         supervisor = kwargs.get('supervisor', task_supervisor)
         if tt == TT_THREAD:
-            t = threading.Thread(
-                group=kwargs.get('group'),
-                target=_background_task_thread_runner,
-                name=kwargs.get('name'),
-                args=(f, supervisor) + args,
-                kwargs=kw)
+            t = threading.Thread(group=kwargs.get('group'),
+                                 target=_background_task_thread_runner,
+                                 name=kwargs.get('name'),
+                                 args=(f, supervisor) + args,
+                                 kwargs=kw)
             if kwargs.get('daemon'): t.setDaemon(True)
             supervisor.put_task(t, kwargs.get('priority', TASK_NORMAL),
                                 kwargs.get('delay'))
             return t
         elif tt == TT_MP:
-            task_id = str(uuid.uuid4())
-            task = (task_id, f, args, kw,
+            task_id = uuid.uuid4()
+            task = (f, args, kw,
                     gen_mp_callback(task_id, kwargs.get('callback'),
                                     supervisor))
-            supervisor.put_task(
-                task,
-                kwargs.get('priority', TASK_NORMAL),
-                kwargs.get('delay'),
-                tt=TT_MP)
+            supervisor.put_task(task,
+                                kwargs.get('priority', TASK_NORMAL),
+                                kwargs.get('delay'),
+                                tt=TT_MP,
+                                task_id=task_id)
 
     return start_task
 

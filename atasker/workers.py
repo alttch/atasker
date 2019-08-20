@@ -150,11 +150,10 @@ class BackgroundWorker:
             self.start_stop_lock.release()
 
     def _start(self, *args, **kwargs):
-        t = threading.Thread(
-            name=self.name,
-            target=self.loop,
-            args=self._task_args,
-            kwargs=self._task_kwargs)
+        t = threading.Thread(name=self.name,
+                             target=self.loop,
+                             args=self._task_args,
+                             kwargs=self._task_kwargs)
         if self.daemon:
             t.setDaemon(True)
         self.supervisor.put_task(t, self.priority)
@@ -166,7 +165,8 @@ class BackgroundWorker:
         self.stop(wait=False)
 
     def _cb_mp(self, result):
-        self.supervisor.mark_task_completed(self._current_executor, tt=TT_MP)
+        self.supervisor.mark_task_completed(task_id=self._current_executor,
+                                            tt=TT_MP)
         if self.process_result(result) is False:
             self._abort()
         self._current_executor = None
@@ -293,8 +293,8 @@ class BackgroundAsyncWorker(BackgroundWorker):
             self._send_executor_stop_event()
 
     def _send_executor_stop_event(self):
-        asyncio.run_coroutine_threadsafe(
-            self._set_stop_event(), loop=self.supervisor.event_loop)
+        asyncio.run_coroutine_threadsafe(self._set_stop_event(),
+                                         loop=self.supervisor.event_loop)
 
     async def _set_stop_event(self):
         self._executor_stop_event.set()
@@ -304,8 +304,8 @@ class BackgroundAsyncWorker(BackgroundWorker):
         if asyncio.iscoroutinefunction(self.run):
             self._current_executor = self.run
             if self.executor_loop:
-                asyncio.run_coroutine_threadsafe(
-                    self._run_coroutine(*args), loop=self.executor_loop)
+                asyncio.run_coroutine_threadsafe(self._run_coroutine(*args),
+                                                 loop=self.executor_loop)
                 return True
             else:
                 try:
@@ -317,19 +317,18 @@ class BackgroundAsyncWorker(BackgroundWorker):
             self._current_executor = None
             return result is not False and self._active
         elif self._run_in_mp:
-            task_id = uuid.uuid4()
-            self._current_executor = task_id
-            return self.supervisor.put_task(
-                (task_id, self.run, args + self._task_args, self._task_kwargs,
+            task_id = self.supervisor.put_task(
+                (self.run, args + self._task_args, self._task_kwargs,
                  self._cb_mp),
                 self.priority,
-                tt=TT_MP) and self._active
+                tt=TT_MP)
+            self._current_executor = task_id
+            return task_id is not None and self._active
         else:
-            t = threading.Thread(
-                target=self._run,
-                name=self.name + '_run',
-                args=args,
-                kwargs=kwargs)
+            t = threading.Thread(target=self._run,
+                                 name=self.name + '_run',
+                                 args=args,
+                                 kwargs=kwargs)
             self._current_executor = t
             if self.daemon:
                 t.setDaemon(True)
@@ -347,8 +346,8 @@ class BackgroundQueueWorker(BackgroundAsyncWorker):
             self._qclass = asyncio.queues.Queue
 
     def put(self, t):
-        asyncio.run_coroutine_threadsafe(
-            self._Q.put(t), loop=self.supervisor.event_loop)
+        asyncio.run_coroutine_threadsafe(self._Q.put(t),
+                                         loop=self.supervisor.event_loop)
 
     def send_stop_events(self):
         try:
@@ -388,8 +387,8 @@ class BackgroundEventWorker(BackgroundAsyncWorker):
     def trigger(self, force=False):
         if self._current_executor and not force:
             return
-        asyncio.run_coroutine_threadsafe(
-            self._set_event(), loop=self.supervisor.event_loop)
+        asyncio.run_coroutine_threadsafe(self._set_event(),
+                                         loop=self.supervisor.event_loop)
 
     async def _set_event(self):
         self._E.set()
