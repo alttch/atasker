@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.21"
+__version__ = "0.2.23"
 
 import threading
 import multiprocessing
@@ -186,12 +186,12 @@ class TaskSupervisor:
         elif tt == TT_MP:
             return len(self._active_mps)
 
-    def get_stats(self, tt=None):
+    def get_info(self, tt=None):
 
-        class SupervisorStats:
+        class SupervisorInfo:
             pass
 
-        result = SupervisorStats()
+        result = SupervisorInfo()
         with self._lock:
             for p in ['pool_size', 'reserve_normal', 'reserve_high']:
                 if tt == TT_THREAD or tt is None:
@@ -208,10 +208,10 @@ class TaskSupervisor:
                 result.mp_tasks = list(self._active_mps)
                 result.mp_tasks_count = len(result.mp_tasks)
                 result.mp_queue = self._mp_queue.copy()
-            result.task_info = []
+            result.task_info = {}
             for n, v in self._task_info.items():
                 if tt is None or v.tt == tt:
-                    result.task_info.append(v)
+                    result.task_info[n] = (v)
         return result
 
     async def _start_task(self,

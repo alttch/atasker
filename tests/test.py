@@ -3,7 +3,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.21"
+__version__ = "0.2.23"
 
 from pathlib import Path
 
@@ -214,7 +214,7 @@ class Test(unittest.TestCase):
         self.assertFalse(result.locker_failed)
 
     def test_supervisor(self):
-        result = task_supervisor.get_stats()
+        result = task_supervisor.get_info()
 
         self.assertEqual(result.thread_tasks_count, 0)
         self.assertEqual(result.mp_tasks_count, 0)
