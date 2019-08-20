@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.17"
+__version__ = "0.2.18"
 
 import threading
 import multiprocessing
@@ -9,6 +9,7 @@ import time
 import logging
 import asyncio
 import uuid
+import copy
 
 from concurrent.futures import CancelledError
 
@@ -63,7 +64,7 @@ class TaskSupervisor:
         self._schedulers = {}
         self._thread_queue = {TASK_LOW: [], TASK_NORMAL: [], TASK_HIGH: []}
         self._mp_queue = {TASK_LOW: [], TASK_NORMAL: [], TASK_HIGH: []}
-        self._task_info = {}
+        self._task_info = {}  # deep copied, should not contain complex objects
         self.default_async_executor_loop = None
         self.mp_pool = None
         self.daemon = False
@@ -186,6 +187,11 @@ class TaskSupervisor:
         with self._lock:
             result['threads'] = list(self._active_threads)
             result['mps'] = list(self._active_mps)
+            result['threads_count'] = len(result['threads'])
+            result['mps_count'] = len(result['mps'])
+            result['thread_queue'] = self._thread_queue.copy()
+            result['mp_queue'] = self._mp_queue.copy()
+            result['task_info'] = copy.deepcopy(self._task_info)
         return result
 
     async def _start_task(self,

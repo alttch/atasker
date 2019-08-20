@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.17"
+__version__ = "0.2.18"
 
 import threading
 import logging

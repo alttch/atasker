@@ -3,7 +3,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.17"
+__version__ = "0.2.18"
 
 from pathlib import Path
 
@@ -216,8 +216,8 @@ class Test(unittest.TestCase):
     def test_supervisor(self):
         result = task_supervisor.get_stats()
 
-        self.assertEqual(len(result['threads']), 0)
-        self.assertEqual(len(result['mps']), 0)
+        self.assertEqual(result['threads_count'], 0)
+        self.assertEqual(result['mps_count'], 0)
 
 
 task_supervisor.set_thread_pool(pool_size=20, reserve_normal=5, reserve_high=5)
