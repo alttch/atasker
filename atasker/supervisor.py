@@ -54,6 +54,7 @@ class TaskSupervisor:
 
         self._active_threads = set()
         self._active_threads_by_t = set()
+        self._waiting_threads_by_t = set()
         self._active_mps = set()
         self._active = False
         self._main_loop_active = False
@@ -130,6 +131,8 @@ class TaskSupervisor:
                 't_q': time.time(),
                 't_s': None
             }
+            if tt == TT_THREAD:
+                self._waiting_threads_by_t.add(task)
         asyncio.run_coroutine_threadsafe(self._Q.put(
             (RQ_TASK, (tt, task_id, task, priority, delay), time.time())),
                                          loop=self.event_loop)
@@ -179,19 +182,25 @@ class TaskSupervisor:
             return len(self._active_mps)
 
     def get_stats(self):
-        result = {}
-        for p in ['pool_size', 'reserve_normal', 'reserve_high']:
-            result['thread_' + p] = getattr(self, 'thread_' + p)
-            if self.mp_pool:
-                result['mp_' + p] = getattr(self, 'mp_' + p)
+
+        class SupervisorStats:
+            pass
+
+        result = SupervisorStats()
         with self._lock:
-            result['threads'] = list(self._active_threads)
-            result['mps'] = list(self._active_mps)
-            result['threads_count'] = len(result['threads'])
-            result['mps_count'] = len(result['mps'])
-            result['thread_queue'] = self._thread_queue.copy()
-            result['mp_queue'] = self._mp_queue.copy()
-            result['task_info'] = copy.deepcopy(self._task_info)
+            for p in ['pool_size', 'reserve_normal', 'reserve_high']:
+                setattr(result, 'thread_' + p, getattr(self, 'thread_' + p))
+                if self.mp_pool:
+                    setattr(result, 'mp_' + p, getattr(self, 'mp_' + p))
+            result.thread_tasks = list(self._active_threads)
+            result.threads_active = list(self._active_threads_by_t)
+            result.threads_waiting = list(self._waiting_threads_by_t)
+            result.mp_tasks = list(self._active_mps)
+            result.thread_tasks_count = len(result.thread_tasks)
+            result.mp_tasks_count = len(result.mp_tasks)
+            result.thread_queue = self._thread_queue.copy()
+            result.mp_queue = self._mp_queue.copy()
+            result.task_info = copy.deepcopy(self._task_info)
         return result
 
     async def _start_task(self,
@@ -228,6 +237,7 @@ class TaskSupervisor:
                     return
             if tt == TT_THREAD:
                 self._active_threads.add(task_id)
+                self._waiting_threads_by_t.remove(task)
                 self._active_threads_by_t.add(task)
                 logger.debug(
                     'new task {}: {}, thread pool size: {} / {}'.format(

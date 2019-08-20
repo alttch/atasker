@@ -216,8 +216,8 @@ class Test(unittest.TestCase):
     def test_supervisor(self):
         result = task_supervisor.get_stats()
 
-        self.assertEqual(result['threads_count'], 0)
-        self.assertEqual(result['mps_count'], 0)
+        self.assertEqual(result.thread_tasks_count, 0)
+        self.assertEqual(result.mp_tasks_count, 0)
 
 
 task_supervisor.set_thread_pool(pool_size=20, reserve_normal=5, reserve_high=5)
