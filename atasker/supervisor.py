@@ -121,9 +121,6 @@ class TaskSupervisor:
             return
         if tt == TT_THREAD:
             task._atask_id = task_id
-        asyncio.run_coroutine_threadsafe(self._Q.put(
-            (RQ_TASK, (tt, task_id, task, priority, delay), time.time())),
-                                         loop=self.event_loop)
         with self._lock:
             self._task_info[task_id] = {
                 'id': task_id,
@@ -132,6 +129,9 @@ class TaskSupervisor:
                 't_q': time.time(),
                 't_s': None
             }
+        asyncio.run_coroutine_threadsafe(self._Q.put(
+            (RQ_TASK, (tt, task_id, task, priority, delay), time.time())),
+                                         loop=self.event_loop)
         return task_id
 
     def create_mp_pool(self, *args, **kwargs):
