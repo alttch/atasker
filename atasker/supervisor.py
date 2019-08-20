@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.20"
+__version__ = "0.2.21"
 
 import threading
 import multiprocessing
@@ -133,8 +133,7 @@ class TaskSupervisor:
         if tt == TT_THREAD:
             task._atask_id = task_id
         ti = TaskInfo(tt, task_id, priority)
-        ti.tt = tt,
-        ti.time_queued = time.time(),
+        ti.time_queued = time.time()
         with self._lock:
             self._task_info[task_id] = ti
             if tt == TT_THREAD:
