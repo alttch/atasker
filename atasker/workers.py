@@ -208,17 +208,18 @@ class BackgroundWorker:
         """
         Stop worker
         """
-        self.start_stop_lock.acquire()
-        try:
-            self.before_stop()
-            self._active = False
-            self.send_stop_events()
-            if wait:
-                self.wait_until_stop()
-            self._stop(wait=wait)
-            self.after_stop()
-        finally:
-            self.start_stop_lock.release()
+        if self._active:
+            self.start_stop_lock.acquire()
+            try:
+                self.before_stop()
+                self._active = False
+                self.send_stop_events()
+                if wait:
+                    self.wait_until_stop()
+                self._stop(wait=wait)
+                self.after_stop()
+            finally:
+                self.start_stop_lock.release()
 
     def _stop(self, **kwargs):
         self.supervisor.unregister_sync_scheduler(self)
