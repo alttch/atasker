@@ -326,6 +326,20 @@ class TaskSupervisor:
         while self._active:
             time.sleep(0.1)
 
+    async def _run_scheduler_loop(self, scheduler):
+        try:
+            t = self.event_loop.create_task(scheduler.loop())
+            with self._lock:
+                self._schedulers[scheduler] = (scheduler, t)
+            if hasattr(scheduler, 'extra_loops'):
+                for l in scheduler.extra_loops:
+                    self.event_loop.create_task(getattr(scheduler, l)())
+            await t
+        except CancelledError:
+            pass
+        except Exception as e:
+            logger.error(e)
+
     async def _main_loop(self):
         self._Q = asyncio.queues.Queue()
         self._started.set()
@@ -337,12 +351,8 @@ class TaskSupervisor:
                 r, res, t_put = data
                 if r == RQ_SCHEDULER:
                     logger.debug('Supervisor: new scheduler {}'.format(res))
-                    scheduler_task = self.event_loop.create_task(res.loop())
-                    if hasattr(res, 'extra_loops'):
-                        for l in res.extra_loops:
-                            self.event_loop.create_task(getattr(res, l)())
-                    with self._lock:
-                        self._schedulers[res] = (res, scheduler_task)
+                    scheduler_task = self.event_loop.create_task(
+                        self._run_scheduler_loop(res))
                 elif r == RQ_TASK:
                     logger.debug('Supervisor: new task {}'.format(res))
                     tt, task_id, target, priority, delay = res
