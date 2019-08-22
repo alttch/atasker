@@ -82,18 +82,14 @@ When *background_worker* decorator detects asynchronous function, class
 (*BackgroundQueueWorker*, *BackgroundEventWorker* and
 *BackgroundIntervalWorker* support synchronous functions out-of-the-box).
 
-Additional worker parameter *loop* may be specified to put executor function
-inside external async loop.
+Additional worker parameter *loop* (*_loop* at startup) may be specified to put
+executor function inside external async loop.
 
-Default external loop may be also specified in task supervisor:
+.. note::
 
-.. code:: python
-
-    # loop = some asyncio loop
-
-    from atasker import task_supervisor
-
-    task_supervisor.default_async_executor_loop = loop
+   To prevent interference between supervisor event loop and executors, it's
+   strongly recommended to specify own async event loop or create
+   :ref:`aloop<aloops>`.
 
 Multiprocessing executor function
 ---------------------------------
@@ -193,7 +189,10 @@ in separate thread instantly.
 BackgroundAsyncWorker
 ---------------------
 
-Similar to *BackgroundWorker* but used for async executor functions.
+Similar to *BackgroundWorker* but used for async executor functions. Has
+additional parameter *loop=* (*_loop* in start function) to specify either
+async event loop or :ref:`aloop<aloops>` object. By default either task
+supervisor event loop or task supervisor default aloop is used.
 
 .. code:: python
 

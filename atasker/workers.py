@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.23"
+__version__ = "0.3.0"
 
 import threading
 import logging
@@ -14,7 +14,7 @@ import types
 from atasker import task_supervisor
 
 from atasker import TASK_NORMAL
-from atasker.supervisor import TT_COROUTINE, TT_THREAD, TT_MP
+from atasker.supervisor import TT_COROUTINE, TT_THREAD, TT_MP, ALoop
 
 logger = logging.getLogger('atasker/workers')
 
@@ -237,8 +237,7 @@ class BackgroundAsyncWorker(BackgroundWorker):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.executor_loop = kwargs.get(
-            'loop', self.supervisor.default_async_executor_loop)
+        self.executor_loop = kwargs.get('loop')
 
     def _register(self):
         self.supervisor.register_scheduler(self)
@@ -246,6 +245,10 @@ class BackgroundAsyncWorker(BackgroundWorker):
 
     def _start(self, *args, **kwargs):
         self.executor_loop = kwargs.get('_loop', self.executor_loop)
+        if not self.executor_loop and self.supervisor.default_aloop:
+            self.executor_loop = self.supervisor.default_aloop
+        if isinstance(self.executor_loop, ALoop):
+            self.executor_loop = self.executor_loop.get_loop()
         self._register()
 
     def _stop(self, *args, **kwargs):

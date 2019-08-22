@@ -36,6 +36,9 @@ task_supervisor.poll_delay = 0.01
 # task_supervisor.default_executor_loop = loop
 task_supervisor.start()
 
+al = task_supervisor.create_aloop('myworkers', default=True, daemon=True, start=False)
+task_supervisor.start_aloop('myworkers')
+
 f = TaskCollection()
 # from multiprocessing import Pool
 
@@ -49,9 +52,9 @@ from tests.mpworker import MPWorker
 
 
 @background_worker(interval=0.5)
-def myworker(*args, **kwargs):
+async def myworker(*args, **kwargs):
     global c
-    # print('worker is running')
+    print('worker is running {}'.format(threading.current_thread()))
     # print(args)
     # print(kwargs)
     c += 1
@@ -101,10 +104,11 @@ def myeventworker(**kwargs):
     # time.sleep(1)
 
 
-#@background_task
-def test(*args, **kwargs):
+# @background_task
+async def test(*args, **kwargs):
     print('job ttt: test', args, kwargs)
-    time.sleep(1)
+    await asyncio.sleep(1)
+    return '12345'
 
 
 @f(priority=atasker.TASK_CRITICAL)
@@ -144,8 +148,8 @@ def someworker(**kwargs):
 # time.sleep(1)
 # task_supervisor.stop(wait=2)
 # exit()
-myworker.start(123, x=2)
-myqueuedworker.start()
+myworker.start(123, x=2, _loop=al)
+# myqueuedworker.start()
 # myeventworker.start()
 # someworker.start()
 # w2=atasker.W2() #interval=0.1)
@@ -155,11 +159,11 @@ myqueuedworker.start()
 # w2.put('xxx')
 # w2.put('xxx')
 # w2.put('xxx')
-myqueuedworker.put('task1')
+# myqueuedworker.put('task1')
 # myevent.set()
 # time.sleep(2)
-myqueuedworker.put('task2')
-
+# myqueuedworker.put('task2')
+print(al.background_task(test()))
 # myqueuedworker.put('task3')
 # myqueuedworker.put('task4')
 # for i in range(100):
@@ -220,7 +224,7 @@ print('waiting...')
 # someworker.stop(wait=True)
 # print('worker stopped')
 for x in range(0,30):
-    print(task_supervisor.get_stats())
+    print(task_supervisor.get_info().aloops)
     time.sleep(0.1)
 # task_supervisor.block()
 # loop.run_forever()

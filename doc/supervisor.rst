@@ -143,6 +143,75 @@ Params:
 * **cancel_tasks** if specified, task supervisor will try to forcibly cancel
   all scheduler coroutines. 
 
+.. _aloops:
+
+aloops: async executors and tasks
+=================================
+
+Usually it's unsafe to run both :doc:`schedulers (workers)<workers>` executors
+and custom tasks in supervisor's event loop. Workers use event loop by default
+and if anything is blocked, the program may be freezed.
+
+To avoid this, it's strongly recommended to create independent async loops for
+your custom tasks. atasker supervisor has built-in engine for async loops,
+called "aloops", each aloop run in a separated thread and doesn't interfere
+with supervisor event loop and others.
+
+Create
+------
+
+If you plan to use async worker executors, create aloop:
+
+.. code:: python
+
+   a = task_supervisor.create_aloop('myworkers', default=True, daemon=True)
+   # the loop is instantly started by default, to prevent add param start=False
+   # and then use
+   # task_supervisor.start_aloop('myworkers')
+
+To determine in which thread executor is started, simply get its name. aloop
+threads are called "supervisor_aloop_<name>".
+
+Using with workers
+------------------
+
+Workers automatically launch async executor function in default aloop, or aloop
+can be specified with *loop=* at init or *_loop=* at startup.
+
+Executing own coroutines
+------------------------
+
+aloops have 2 methods to execute own coroutines:
+
+.. code:: python
+
+   # put coroutine to loop and forget
+   aloop.background_task(coro(args))
+
+   # blocking wait for result from coroutine
+   result = aloop.run(coro(args))
+
+Other supervisor methods
+------------------------
+
+.. note::
+
+   It's not recommended to create/start/stop aloops without supervisor
+
+.. code:: python
+
+   # set default aloop
+   task_supervisor.set_default_aloop(aloop):
+
+   # get aloop by name
+   task_supervisor.get_aloop(name)
+
+   # stop aloop (not required, supervisor stops all aloops at shutdown)
+   task_supervisor.stop_aloop(name)
+
+   # get aloop async event loop object for direct access
+   aloop.get_loop()
+
 .. _create_mp_pool:
 
 Multiprocessing

@@ -3,7 +3,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.2.23"
+__version__ = "0.3.0"
 
 from pathlib import Path
 
@@ -11,6 +11,7 @@ import sys
 import logging
 import unittest
 import time
+import threading
 
 from types import SimpleNamespace
 
@@ -26,7 +27,9 @@ result = SimpleNamespace(g=None,
                          background_queue_worker=0,
                          background_event_worker=0,
                          locker_success=False,
-                         locker_failed=False)
+                         locker_failed=False,
+                         test_aloop=None,
+                         test_aloop_background_task=None)
 
 sys.path.insert(0, Path().absolute().parent.as_posix())
 
@@ -149,6 +152,7 @@ class Test(unittest.TestCase):
         async def t(**kwargs):
             result.background_interval_worker_async_ex += 1
 
+        task_supervisor.default_aloop = None
         t.start()
         wait()
         t.stop()
@@ -218,6 +222,32 @@ class Test(unittest.TestCase):
 
         self.assertEqual(result.thread_tasks_count, 0)
         self.assertEqual(result.mp_tasks_count, 0)
+
+    def test_aloop(self):
+
+        @background_worker(interval=0.02)
+        async def t(**kwargs):
+            result.test_aloop = threading.current_thread().getName()
+
+        task_supervisor.create_aloop('test1', default=True)
+        t.start()
+        wait()
+        t.stop()
+        self.assertEqual(result.test_aloop, 'supervisor_aloop_test1')
+
+    def test_aloop_run(self):
+
+        async def t1():
+            result.test_aloop_background_task = 1
+
+        async def t2(x):
+            return x * 2
+
+        a = task_supervisor.create_aloop('test2')
+        a.background_task(t1())
+        wait()
+        self.assertEqual(result.test_aloop_background_task, 1)
+        self.assertEqual(a.run(t2(2)), 4)
 
 
 task_supervisor.set_thread_pool(pool_size=20, reserve_normal=5, reserve_high=5)
