@@ -67,6 +67,7 @@ class BackgroundWorker:
         self._suppress_sleep = False
         self.last_executed = 0
         self._executor_stop_event = threading.Event()
+        self._is_worker = True
 
     def set_name(self, name):
         self.name = '_background_worker_%s' % (name if name is not None else
