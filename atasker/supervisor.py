@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 
 import threading
 import multiprocessing
@@ -351,7 +351,7 @@ class TaskSupervisor:
                 result.mp_tasks = list(self._active_mps)
                 result.mp_tasks_count = len(result.mp_tasks)
                 result.mp_queue = self._mp_queue.copy()
-                result.aloops = self.aloops.copy()
+            result.aloops = self.aloops.copy()
             result.task_info = {}
             for n, v in self._task_info.items():
                 if tt is None or v.tt == tt:
