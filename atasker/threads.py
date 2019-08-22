@@ -136,10 +136,11 @@ def background_task(f, *args, **kwargs):
         tt: TT_THREAD (default) or TT_MP (TT_COROUTINE is detected
             automatically)
         callback: callback function for TT_MP
-        loop: asyncio loop or aloop object
+        loop: asyncio loop or aloop object (optional)
 
     Raises:
-        RuntimeError if coroutine function is used but loop is not specified
+        RuntimeError: if coroutine function is used but loop is not specified
+            and supervisor doesn't have default aloop
     """
 
     def gen_mp_callback(task_id, callback, supervisor):
@@ -157,6 +158,8 @@ def background_task(f, *args, **kwargs):
         supervisor = kwargs.get('supervisor', task_supervisor)
         if tt == TT_COROUTINE or asyncio.iscoroutinefunction(f):
             loop = kwargs.get('loop')
+            if isinstance(loop, str) or loop is None:
+                loop = supervisor.get_aloop(loop)
             if not loop:
                 raise RuntimeError('loop not specified')
             if isinstance(loop, ALoop):

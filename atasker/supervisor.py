@@ -299,9 +299,12 @@ class TaskSupervisor:
     def set_default_aloop(self, aloop):
         self.default_aloop = aloop
 
-    def get_aloop(self, name):
+    def get_aloop(self, name=None, default=True):
         with self._lock:
-            return self.aloops.get(name)
+            if name is not None:
+                return self.aloops.get(name)
+            elif default:
+                return self.default_aloop
 
     def start_aloop(self, name):
         with self._lock:
