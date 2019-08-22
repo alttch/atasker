@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 
 import threading
 import multiprocessing
@@ -281,6 +281,8 @@ class TaskSupervisor:
             return len(self._active_mps)
 
     def create_aloop(self, name, daemon=False, start=True, default=False):
+        if name == 'supervisor':
+            raise RuntimeError('Name "supervisor" is reserved')
         with self._lock:
             if name in self.aloops:
                 logger.error('loop {} already exists'.format(name))
