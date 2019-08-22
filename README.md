@@ -106,6 +106,26 @@ def mytask2():
 
 background_task(mytask2, priority=TASK_HIGH)()
 ```
+### Async tasks
+
+```python
+# new asyncio loop is automatically created in own thread
+a1 = task_supervisor.create_aloop('myaloop', default=True)
+
+async def calc(a):
+    print(a)
+    await asyncio.sleep(1)
+    print(a * 2)
+    return a * 3
+
+# call from sync code
+
+# put coroutine and forget
+background_task(calc)(1)
+
+# get coroutine result
+result = a1.run(calc(1))
+```
 
 ### Worker examples
 

@@ -29,6 +29,12 @@ Q = Queue()
 
 c = 0
 
+async def calc(a):
+    print(a)
+    await asyncio.sleep(1)
+    print(a*2)
+    return a * 3
+
 task_supervisor.set_thread_pool(pool_size=20, reserve_normal=0, reserve_high=0)
 # task_supervisor.create_mp_pool()
 task_supervisor.set_mp_pool(pool_size=2, reserve_normal=0, reserve_high=0)
@@ -164,6 +170,7 @@ myworker.start(123, x=2)#, _loop=al)
 # time.sleep(2)
 # myqueuedworker.put('task2')
 background_task(test, loop=al.get_loop())(1,2,3, x='test')
+print(al.run(calc(1)))
 # myqueuedworker.put('task3')
 # myqueuedworker.put('task4')
 # for i in range(100):
