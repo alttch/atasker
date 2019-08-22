@@ -9,9 +9,7 @@ from atasker.supervisor import TASK_NORMAL
 from atasker.supervisor import TASK_HIGH
 from atasker.supervisor import TASK_CRITICAL
 
-# from atasker.supervisor import TT_COROUTINE
-from atasker.supervisor import TT_THREAD
-from atasker.supervisor import TT_MP
+from atasker.supervisor import TT_THREAD, TT_MP, TT_COROUTINE
 
 task_supervisor = TaskSupervisor()
 

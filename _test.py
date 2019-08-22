@@ -36,8 +36,8 @@ task_supervisor.poll_delay = 0.01
 # task_supervisor.default_executor_loop = loop
 task_supervisor.start()
 
-al = task_supervisor.create_aloop('myworkers', default=True, daemon=True, start=False)
-task_supervisor.start_aloop('myworkers')
+al = task_supervisor.create_aloop('myworkers', default=True, daemon=True)
+# task_supervisor.start_aloop('myworkers')
 
 f = TaskCollection()
 # from multiprocessing import Pool
@@ -58,7 +58,7 @@ async def myworker(*args, **kwargs):
     # print(args)
     # print(kwargs)
     c += 1
-    time.sleep(0.3)
+    # time.sleep(0.3)
     # print(c)
     # return False
 
@@ -148,7 +148,7 @@ def someworker(**kwargs):
 # time.sleep(1)
 # task_supervisor.stop(wait=2)
 # exit()
-myworker.start(123, x=2, _loop=al)
+myworker.start(123, x=2)#, _loop=al)
 # myqueuedworker.start()
 # myeventworker.start()
 # someworker.start()
@@ -163,7 +163,7 @@ myworker.start(123, x=2, _loop=al)
 # myevent.set()
 # time.sleep(2)
 # myqueuedworker.put('task2')
-print(al.background_task(test()))
+background_task(test, loop=al.get_loop())(1,2,3, x='test')
 # myqueuedworker.put('task3')
 # myqueuedworker.put('task4')
 # for i in range(100):

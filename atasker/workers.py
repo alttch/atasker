@@ -240,6 +240,11 @@ class BackgroundAsyncWorker(BackgroundWorker):
         self.executor_loop = kwargs.get('loop')
 
     def _register(self):
+        if not self.executor_loop and asyncio.iscoroutinefunction(self.run):
+            logger.warning(
+                ('{}: no executor loop defined, ' +
+                 'will start executor in supervisor event loop').format(
+                     self.name))
         self.supervisor.register_scheduler(self)
         self._started.wait()
 

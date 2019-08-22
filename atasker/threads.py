@@ -7,13 +7,16 @@ import threading
 import time
 import uuid
 import logging
+import asyncio
 
 from functools import wraps
 
 from atasker import task_supervisor
 
 from atasker import TASK_NORMAL
-from atasker import TT_THREAD, TT_MP
+from atasker import TT_THREAD, TT_MP, TT_COROUTINE
+
+from atasker.supervisor import ALoop
 
 
 class LocalProxy(threading.local):
@@ -130,8 +133,13 @@ def background_task(f, *args, **kwargs):
         daemon: if True, task thread will be launched as daemon
         priority: task :ref:`priority<priorities>`
         supervisor: custom :doc:`task supervisor<supervisor>`
-        tt: TT_THREAD (default) or TT_MP
+        tt: TT_THREAD (default) or TT_MP (TT_COROUTINE is detected
+            automatically)
         callback: callback function for TT_MP
+        loop: asyncio loop or aloop object
+
+    Raises:
+        RuntimeError if coroutine function is used but loop is not specified
     """
 
     def gen_mp_callback(task_id, callback, supervisor):
@@ -147,7 +155,16 @@ def background_task(f, *args, **kwargs):
     def start_task(*args, **kw):
         tt = kwargs.get('tt', TT_THREAD)
         supervisor = kwargs.get('supervisor', task_supervisor)
-        if tt == TT_THREAD:
+        if tt == TT_COROUTINE or asyncio.iscoroutinefunction(f):
+            loop = kwargs.get('loop')
+            if not loop:
+                raise RuntimeError('loop not specified')
+            if isinstance(loop, ALoop):
+                return loop.background_task(f(*args, **kw))
+            else:
+                return asyncio.run_coroutine_threadsafe(f(*args, **kw),
+                                                        loop=loop)
+        elif tt == TT_THREAD:
             t = threading.Thread(group=kwargs.get('group'),
                                  target=_background_task_thread_runner,
                                  name=kwargs.get('name'),

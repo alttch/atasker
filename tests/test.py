@@ -244,7 +244,7 @@ class Test(unittest.TestCase):
             return x * 2
 
         a = task_supervisor.create_aloop('test2')
-        a.background_task(t1())
+        background_task(t1, loop=a)()
         wait()
         self.assertEqual(result.test_aloop_background_task, 1)
         self.assertEqual(a.run(t2(2)), 4)
