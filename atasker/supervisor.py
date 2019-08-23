@@ -354,6 +354,7 @@ class TaskSupervisor:
                 result.mp_tasks_count = len(result.mp_tasks)
                 result.mp_queue = self._mp_queue.copy()
             result.aloops = self.aloops.copy()
+            result.schedulers = self._schedulers
             result.task_info = {}
             for n, v in self._task_info.items():
                 if tt is None or v.tt == tt:
@@ -473,7 +474,7 @@ class TaskSupervisor:
         while self._active:
             time.sleep(0.1)
 
-    async def _run_scheduler_loop(self, scheduler):
+    async def _launch_scheduler_loop(self, scheduler):
         try:
             t = self.event_loop.create_task(scheduler.loop())
             with self._lock:
@@ -498,8 +499,8 @@ class TaskSupervisor:
                 r, res, t_put = data
                 if r == RQ_SCHEDULER:
                     logger.debug('Supervisor: new scheduler {}'.format(res))
-                    scheduler_task = self.event_loop.create_task(
-                        self._run_scheduler_loop(res))
+                    self.event_loop.create_task(
+                        self._launch_scheduler_loop(res))
                 elif r == RQ_TASK:
                     logger.debug('Supervisor: new task {}'.format(res))
                     tt, task_id, target, priority, delay = res
