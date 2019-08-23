@@ -58,8 +58,14 @@ To put task into :ref:`multiprocessing pool<create_mp_pool>`, append parameter
 Optional parameter *callback* can be used to specify function which handles
 task result.
 
+.. note::
+
+   Multiprocessing target function always receives *_task_id* param.
+
 Run in async way
 ----------------
+
+You may put task from your coroutine, without using callback, example:
 
 .. code:: python
 

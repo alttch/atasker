@@ -9,3 +9,4 @@
     collections
     localproxy
     locker
+    debug

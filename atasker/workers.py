@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.11"
+__version__ = "0.3.12"
 
 import threading
 import logging
@@ -16,7 +16,9 @@ from atasker import task_supervisor
 from atasker import TASK_NORMAL
 from atasker.supervisor import TT_COROUTINE, TT_THREAD, TT_MP, ALoop
 
-logger = logging.getLogger('atasker/workers')
+logger = logging.getLogger('atasker')
+
+debug = False
 
 
 class BackgroundWorker:
@@ -134,7 +136,7 @@ class BackgroundWorker:
                 self.run, types.FunctionType
             ) and self.supervisor.mp_pool and self._can_use_mp_pool
             if self._run_in_mp:
-                logger.debug(self.name + ' will use mp pool')
+                if debug: logger.debug(self.name + ' will use mp pool')
             else:
                 kw['_worker'] = self
             self.daemon = kwargs.get('daemon', True)
@@ -198,12 +200,12 @@ class BackgroundWorker:
     def mark_started(self):
         self._started.set()
         self._stopped.clear()
-        logger.debug(self.name + ' started')
+        if debug: logger.debug(self.name + ' started')
 
     def mark_stopped(self):
         self._stopped.set()
         self._started.clear()
-        logger.debug(self.name + ' stopped')
+        if debug: logger.debug(self.name + ' stopped')
 
     def stop(self, wait=True):
         """
