@@ -331,7 +331,7 @@ class TaskSupervisor:
             if _lock:
                 self._lock.release()
 
-    def get_info(self, tt=None):
+    def get_info(self, tt=None, aloops=True, schedulers=True):
 
         class SupervisorInfo:
             pass
@@ -353,13 +353,23 @@ class TaskSupervisor:
                 result.mp_tasks = list(self._active_mps)
                 result.mp_tasks_count = len(result.mp_tasks)
                 result.mp_queue = self._mp_queue.copy()
-            result.aloops = self.aloops.copy()
-            result.schedulers = self._schedulers
+            if aloops:
+                result.aloops = self.aloops.copy()
+            if schedulers:
+                result.schedulers = self._schedulers.copy()
             result.task_info = {}
             for n, v in self._task_info.items():
                 if tt is None or v.tt == tt:
                     result.task_info[n] = (v)
         return result
+
+    def get_aloops(self):
+        with self._lock:
+            return self.aloops.copy()
+
+    def get_schedulers(self):
+        with self._lock:
+            return self._schedulers.copy()
 
     async def _start_task(self,
                           tt,
