@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.9"
+__version__ = "0.3.10"
 
 import threading
 import logging
@@ -255,8 +255,8 @@ class BackgroundAsyncWorker(BackgroundWorker):
         if not self.executor_loop and self.supervisor.default_aloop:
             self.executor_loop = self.supervisor.default_aloop
         if isinstance(self.executor_loop, ALoop):
-            self.executor_loop = self.executor_loop.get_loop()
             self.aloop = self.executor_loop
+            self.executor_loop = self.executor_loop.get_loop()
         self._register()
 
     def _stop(self, *args, **kwargs):
