@@ -518,7 +518,7 @@ class TaskSupervisor:
                 r, res, t_put = data
                 if r == RQ_SCHEDULER:
                     if debug:
-                        logger.debug('Supervisor: new scheduler {}'.format(res))
+                        logger.debug('new scheduler {}'.format(res))
                     self.event_loop.create_task(
                         self._launch_scheduler_loop(res))
                 elif r == RQ_TASK:
