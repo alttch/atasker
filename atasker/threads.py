@@ -174,7 +174,7 @@ def background_task(f, *args, **kwargs):
                                  args=(f, supervisor) + args,
                                  kwargs=kw)
             if kwargs.get('daemon'): t.setDaemon(True)
-            supervisor.put_task(t, kwargs.get('priority', TASK_NORMAL),
+            return supervisor.put_task(t, kwargs.get('priority', TASK_NORMAL),
                                 kwargs.get('delay'))
             return t
         elif tt == TT_MP:
@@ -182,7 +182,7 @@ def background_task(f, *args, **kwargs):
             task = (f, args, kw,
                     gen_mp_callback(task_id, kwargs.get('callback'),
                                     supervisor))
-            supervisor.put_task(task,
+            return supervisor.put_task(task,
                                 kwargs.get('priority', TASK_NORMAL),
                                 kwargs.get('delay'),
                                 tt=TT_MP,

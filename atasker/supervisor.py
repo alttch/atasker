@@ -46,8 +46,8 @@ default_timeout_critical = 10
 class TaskInfo:
 
     def __init__(self, tt, task_id, priority):
-        self.tt = tt
         self.id = task_id
+        self.tt = tt
         self.priority = priority
         self.time_queued = None
         self.time_started = None
@@ -389,7 +389,7 @@ class TaskSupervisor:
                           task_priority=TASK_NORMAL,
                           time_put=None,
                           delay=None):
-        if not self._active: return
+        # if not self._active: return
         if tt == TT_THREAD:
             pool_size = self.thread_pool_size
         elif tt == TT_MP:
@@ -404,16 +404,15 @@ class TaskSupervisor:
                     q = self._mp_queue[task_priority]
                     mx = self._max_mps[task_priority]
                 q.append(task_id)
-                while self._active and \
-                        (self._get_active_count(tt) >= mx \
+                while (self._get_active_count(tt) >= mx #self._active and
                         or q[0] != task_id or \
                         self._higher_queues_busy(tt, task_priority)):
                     self._lock.release()
                     await asyncio.sleep(self.poll_delay)
                     self._lock.acquire()
                 q.pop(0)
-                if not self._active:
-                    return
+                # if not self._active:
+                # return
             if tt == TT_THREAD:
                 self._active_threads.add(task_id)
                 self._waiting_threads_by_t.remove(task)
@@ -440,13 +439,13 @@ class TaskSupervisor:
         with self._lock:
             self._task_info[task_id].time_started = time.time()
             self._task_info[task_id].status = TASK_STATUS_STARTED
-        if self._active:
-            if tt == TT_THREAD:
-                task.start()
-            elif tt == TT_MP:
-                kw = task[2].copy() if task[2] else {}
-                kw['_task_id'] = task_id
-                self.mp_pool.apply_async(task[0], task[1], kw, task[3])
+        # if self._active:
+        if tt == TT_THREAD:
+            task.start()
+        elif tt == TT_MP:
+            kw = task[2].copy() if task[2] else {}
+            kw['_task_id'] = task_id
+            self.mp_pool.apply_async(task[0], task[1], kw, task[3])
         time_started = time.time()
         time_spent = time_started - time_put
         if time_spent > self.timeout_critical:
@@ -503,7 +502,7 @@ class TaskSupervisor:
         self._started.wait()
 
     def block(self):
-        while self._active:
+        while self._started.is_set():
             time.sleep(0.1)
 
     async def _launch_scheduler_loop(self, scheduler):
@@ -582,14 +581,18 @@ class TaskSupervisor:
                                 cancel_tasks=cancel_tasks,
                                 _lock=False)
             if debug: logger.debug('async loops stopped')
-        if cancel_tasks:
-            self._cancel_all_tasks()
-            if debug: logger.debug('remaining tasks canceled')
         if isinstance(wait, bool):
             to_wait = None
         else:
             to_wait = time.time() + wait
-        if wait is True or to_wait:
+        if (to_wait or wait is True) and not cancel_tasks:
+            while True:
+                with self._lock:
+                    if not self._task_info:
+                        break
+                time.sleep(self.poll_delay)
+        if debug: logger.debug('no task in queues')
+        if to_wait or wait is True:
             if debug: logger.debug('waiting for tasks to finish')
             while True:
                 if not self._active_threads:
@@ -599,27 +602,16 @@ class TaskSupervisor:
                         'wait timeout, skipping, hope threads will finish')
                     break
                 time.sleep(self.poll_delay)
+        if cancel_tasks:
+            self._cancel_all_tasks()
+            if debug: logger.debug('remaining tasks canceled')
         if to_wait or wait is True:
             while True:
-                self._lock.acquire()
-                can_break = True
-                for pr in (TASK_LOW, TASK_NORMAL, TASK_HIGH):
-                    if self._thread_queue[pr] or self._mp_queue[pr]:
-                        can_break = False
+                with self._lock:
+                    if (not self._active_threads and
+                            not self._active_mps) or (to_wait and
+                                                      time.time() > to_wait):
                         break
-                self._lock.release()
-                if can_break: break
-                time.sleep(self.poll_delay)
-        if debug: logger.debug('no task in queues')
-        if to_wait or wait is True:
-            while True:
-                self._lock.acquire()
-                if (not self._active_threads and
-                        not self._active_mps) or (to_wait and
-                                                  time.time() > to_wait):
-                    self._lock.release()
-                    break
-                self._lock.release()
                 time.sleep(self.poll_delay)
         if debug: logger.debug('no active threads/mps')
         if debug: logger.debug('stopping event loop')
