@@ -45,9 +45,10 @@ default_timeout_critical = 10
 
 class TaskInfo:
 
-    def __init__(self, tt, task_id, priority):
+    def __init__(self, tt, task_id, priority, task):
         self.id = task_id
         self.tt = tt
+        self.task = task
         self.priority = priority
         self.time_queued = None
         self.time_started = None
@@ -233,7 +234,7 @@ class TaskSupervisor:
             return
         if tt == TT_THREAD:
             task._atask_id = task_id
-        ti = TaskInfo(tt, task_id, priority)
+        ti = TaskInfo(tt, task_id, priority, task)
         ti.time_queued = time.time()
         with self._lock:
             self._task_info[task_id] = ti
@@ -359,11 +360,15 @@ class TaskSupervisor:
                 result.threads_active = list(self._active_threads_by_t)
                 result.threads_waiting = list(self._waiting_threads_by_t)
                 result.thread_tasks_count = len(result.thread_tasks)
-                result.thread_queue = self._thread_queue.copy()
+                result.thread_queue = []
+                for pr in (TASK_HIGH, TASK_NORMAL, TASK_LOW):
+                    result.thread_queue += self._thread_queue[pr].copy()
             if tt == TT_MP or tt is None:
                 result.mp_tasks = list(self._active_mps)
                 result.mp_tasks_count = len(result.mp_tasks)
-                result.mp_queue = self._mp_queue.copy()
+                result.mp_queue = []
+                for pr in (TASK_HIGH, TASK_NORMAL, TASK_LOW):
+                    result.mp_queue += self._mp_queue[pr].copy()
             if aloops:
                 result.aloops = self.aloops.copy()
             if schedulers:

@@ -92,6 +92,7 @@ Task id can later be used to obtain task info:
 Task info object fields:
 
 * **id** task id
+* **task** task object
 * **tt** task type (TT_THREAD, TT_MP)
 * **priority** task priority
 * **time_queued** time when task was queued

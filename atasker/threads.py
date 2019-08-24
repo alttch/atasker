@@ -132,6 +132,7 @@ def background_task(f, *args, **kwargs):
         name: set task thread name (default: function name)
         daemon: if True, task thread will be launched as daemon
         priority: task :ref:`priority<priorities>`
+        delay: startup delay
         supervisor: custom :doc:`task supervisor<supervisor>`
         tt: TT_THREAD (default) or TT_MP (TT_COROUTINE is detected
             automatically)
