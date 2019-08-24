@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.12"
+__version__ = "0.3.13"
 
 import threading
 import multiprocessing
@@ -26,6 +26,10 @@ TT_COROUTINE = 0
 TT_THREAD = 1
 TT_MP = 2
 
+TASK_STATUS_QUEUED = 0
+TASK_STATUS_STARTED = 1
+TASK_STATUS_CANCELED = -1
+
 logger = logging.getLogger('atasker')
 
 default_poll_delay = 0.1
@@ -47,6 +51,7 @@ class TaskInfo:
         self.priority = priority
         self.time_queued = None
         self.time_started = None
+        self.status = TASK_STATUS_QUEUED
 
 
 class ALoop:
@@ -224,7 +229,7 @@ class TaskSupervisor:
                  task_id=None):
         if task_id is None:
             task_id = str(uuid.uuid4())
-        if not self._started.is_set():
+        if not self._started.is_set() or not self._active:
             return
         if tt == TT_THREAD:
             task._atask_id = task_id
@@ -428,7 +433,9 @@ class TaskSupervisor:
                 pass
         if delay:
             await asyncio.sleep(delay)
-        self._task_info[task_id].time_started = time.time()
+        with self._lock:
+            self._task_info[task_id].time_started = time.time()
+            self._task_info[task_id].status = TASK_STATUS_STARTED
         if self._active:
             if tt == TT_THREAD:
                 task.start()
@@ -589,6 +596,18 @@ class TaskSupervisor:
         if to_wait or wait is True:
             while True:
                 self._lock.acquire()
+                can_break = True
+                for pr in (TASK_LOW, TASK_NORMAL, TASK_HIGH):
+                    if self._thread_queue[pr] or self._mp_queue[pr]:
+                        can_break = False
+                        break
+                self._lock.release()
+                if can_break: break
+                time.sleep(self.poll_delay)
+        if debug: logger.debug('no task in queues')
+        if to_wait or wait is True:
+            while True:
+                self._lock.acquire()
                 if (not self._active_threads and
                         not self._active_mps) or (to_wait and
                                                   time.time() > to_wait):
@@ -615,5 +634,8 @@ class TaskSupervisor:
                             break
                     if can_break: break
                 time.sleep(self.poll_delay)
+        with self._lock:
+            for i, v in self._task_info.items():
+                v.status = TASK_STATUS_CANCELED
         self._started.clear()
         logger.info('supervisor stopped')
