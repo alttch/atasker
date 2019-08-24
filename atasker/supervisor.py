@@ -244,6 +244,10 @@ class TaskSupervisor:
                                          loop=self.event_loop)
         return task_id
 
+    def get_task_info(self, task_id):
+        with self._lock:
+            return self._task_info.get(task_id)
+
     def create_mp_pool(self, *args, **kwargs):
         if args or kwargs:
             self.mp_pool = multiprocessing.Pool(*args, **kwargs)
@@ -446,11 +450,13 @@ class TaskSupervisor:
         time_started = time.time()
         time_spent = time_started - time_put
         if time_spent > self.timeout_critical:
-            logger.critical(self.timeout_message.format(task_id, task, time_spent))
+            logger.critical(
+                self.timeout_message.format(task_id, task, time_spent))
             if self.timeout_critical_func:
                 self.timeout_critical_func(task)
         elif time_spent > self.timeout_warning:
-            logger.warning(self.timeout_message.format(task_id, task, time_spent))
+            logger.warning(
+                self.timeout_message.format(task_id, task, time_spent))
             if self.timeout_warning_func:
                 self.timeout_warning_func(task)
         if tt == TT_THREAD:
