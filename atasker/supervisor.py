@@ -150,7 +150,7 @@ class ALoop:
 
 class TaskSupervisor:
 
-    timeout_message = 'Task {} started in {:.3f} seconds. ' + \
+    timeout_message = 'task {}: {} started in {:.3f} seconds. ' + \
             'Increase pool size or decrease number of workers'
 
     def __init__(self):
@@ -446,11 +446,11 @@ class TaskSupervisor:
         time_started = time.time()
         time_spent = time_started - time_put
         if time_spent > self.timeout_critical:
-            logger.critical(self.timeout_message.format(task, time_spent))
+            logger.critical(self.timeout_message.format(task_id, task, time_spent))
             if self.timeout_critical_func:
                 self.timeout_critical_func(task)
         elif time_spent > self.timeout_warning:
-            logger.warning(self.timeout_message.format(task, time_spent))
+            logger.warning(self.timeout_message.format(task_id, task, time_spent))
             if self.timeout_warning_func:
                 self.timeout_warning_func(task)
         if tt == TT_THREAD:
