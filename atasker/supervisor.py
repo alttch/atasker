@@ -351,6 +351,7 @@ class TaskSupervisor:
         result = SupervisorInfo()
         with self._lock:
             result.active = self._active
+            result.started = self._started.is_set()
             for p in ['pool_size', 'reserve_normal', 'reserve_high']:
                 if tt == TT_THREAD or tt is None:
                     setattr(result, 'thread_' + p, getattr(self, 'thread_' + p))
