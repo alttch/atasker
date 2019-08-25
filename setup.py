@@ -8,7 +8,7 @@ with open('README.md', 'r') as fh:
 setuptools.setup(
     name='atasker',
     version=__version__,
-    author='Altertech Group',
+    author='Altertech',
     author_email='div@altertech.com',
     description=
     'Thread and multiprocessing pooling, task processing via asyncio',
