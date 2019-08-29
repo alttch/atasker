@@ -258,17 +258,17 @@ class TaskSupervisor:
             task._atask_id = task_id
         ti = Task(tt, task_id, priority, task, delay)
         ti.time_queued = time.time()
+        with self._lock:
+            self._tasks[task_id] = ti
         if priority == TASK_CRITICAL:
             self.mark_task_started(ti)
             asyncio.run_coroutine_threadsafe(self._start_task(ti),
                                              loop=self.event_loop)
         else:
-            with self._lock:
-                self._tasks[task_id] = ti
-                if tt == TT_THREAD:
-                    q = self._Qt[priority]
-                else:
-                    q = self._Qmp[priority]
+            if tt == TT_THREAD:
+                q = self._Qt[priority]
+            else:
+                q = self._Qmp[priority]
             asyncio.run_coroutine_threadsafe(q.put(ti), loop=self.event_loop)
         return task_id
 
