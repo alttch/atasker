@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.25"
+__version__ = "0.3.26"
 
 import threading
 import multiprocessing
@@ -418,11 +418,11 @@ class TaskSupervisor:
                 if not tt is False:
                     result.thread_tasks = list(self._active_threads)
                     result.threads_active = list(self._active_threads_by_t)
-                result.thread_tasks_count = len(result.thread_tasks)
+                result.thread_tasks_count = len(self._active_threads)
             if tt == TT_MP or tt is None or tt is False:
                 if not tt is False:
                     result.mp_tasks = list(self._active_mps)
-                result.mp_tasks_count = len(result.mp_tasks)
+                result.mp_tasks_count = len(self._active_mps)
             if aloops:
                 result.aloops = self.aloops.copy()
             if schedulers:
