@@ -27,6 +27,7 @@ TT_MP = 2
 
 TASK_STATUS_QUEUED = 0
 TASK_STATUS_STARTED = 1
+TASK_STATUS_DELAYED = 2
 TASK_STATUS_CANCELED = -1
 
 logger = logging.getLogger('atasker')
@@ -455,10 +456,13 @@ class TaskSupervisor:
                             len(self._active_mps), self.mp_pool_size))
 
     async def _start_task(self, task):
-        if task.delay:
-            await asyncio.sleep(task.delay)
         with self._lock:
             task.time_started = time.time()
+            if not task.delay:
+                task.status = TASK_STATUS_STARTED
+        if task.delay:
+            task.status = TASK_STATUS_DELAYED
+            await asyncio.sleep(task.delay)
             task.status = TASK_STATUS_STARTED
         if task.tt == TT_THREAD:
             task.task.start()
@@ -467,9 +471,7 @@ class TaskSupervisor:
             kw['_task_id'] = task.id
             self.mp_pool.apply_async(task.task[0], task.task[1], kw,
                                      task.task[3])
-        time_started = time.time()
-        task.time_started = time_started
-        time_spent = time_started - task.time_queued
+        time_spent = task.time_started - task.time_queued
         if time_spent > self.timeout_critical:
             logger.critical(
                 self.timeout_message.format(task_id, task.task, time_spent))
