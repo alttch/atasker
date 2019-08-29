@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.26"
+__version__ = "0.3.27"
 
 import threading
 import multiprocessing
@@ -410,9 +410,9 @@ class TaskSupervisor:
             result.active = self._active
             result.started = self._started.is_set()
             for p in ['pool_size', 'reserve_normal', 'reserve_high']:
-                if tt == TT_THREAD or tt is None:
+                if tt == TT_THREAD or tt is None or tt is False:
                     setattr(result, 'thread_' + p, getattr(self, 'thread_' + p))
-                if self.mp_pool and (tt == TT_MP or tt is None):
+                if self.mp_pool and (tt == TT_MP or tt is None or tt is False):
                     setattr(result, 'mp_' + p, getattr(self, 'mp_' + p))
             if tt == TT_THREAD or tt is None or tt is False:
                 if not tt is False:
