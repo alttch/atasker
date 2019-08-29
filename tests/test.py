@@ -20,6 +20,7 @@ result = SimpleNamespace(g=None,
                          task_collection=0,
                          background_task_annotated=None,
                          background_task_thread=None,
+                         background_task_thread_critical=None,
                          background_task_mp=None,
                          background_worker=0,
                          background_interval_worker=0,
@@ -38,7 +39,8 @@ def wait():
     time.sleep(0.1)
 
 
-from atasker import task_supervisor, background_task, background_worker, TT_MP
+from atasker import task_supervisor, background_task, background_worker
+from atasker import TT_MP, TASK_CRITICAL
 
 from atasker import FunctionCollection, TaskCollection, g
 
@@ -112,6 +114,15 @@ class Test(unittest.TestCase):
         background_task(t)(2, x=3)
         wait()
         self.assertEqual(result.background_task_thread, 5)
+
+    def test_background_task_thread_critical(self):
+
+        def t(a, x):
+            result.background_task_thread = a + x
+
+        background_task(t, priority=TASK_CRITICAL)(3, x=4)
+        wait()
+        self.assertEqual(result.background_task_thread, 7)
 
     def test_background_task_mp(self):
 
@@ -263,5 +274,5 @@ if __name__ == '__main__':
     task_supervisor.poll_delay = 0.01
     test_suite = unittest.TestLoader().loadTestsFromTestCase(Test)
     test_result = unittest.TextTestRunner().run(test_suite)
-    task_supervisor.stop(wait=2)
+    task_supervisor.stop(wait=3)
     sys.exit(not test_result.wasSuccessful())
