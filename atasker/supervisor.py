@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.24"
+__version__ = "0.3.25"
 
 import threading
 import multiprocessing
@@ -414,21 +414,24 @@ class TaskSupervisor:
                     setattr(result, 'thread_' + p, getattr(self, 'thread_' + p))
                 if self.mp_pool and (tt == TT_MP or tt is None):
                     setattr(result, 'mp_' + p, getattr(self, 'mp_' + p))
-            if tt == TT_THREAD or tt is None:
-                result.thread_tasks = list(self._active_threads)
-                result.threads_active = list(self._active_threads_by_t)
+            if tt == TT_THREAD or tt is None or tt is False:
+                if not tt is False:
+                    result.thread_tasks = list(self._active_threads)
+                    result.threads_active = list(self._active_threads_by_t)
                 result.thread_tasks_count = len(result.thread_tasks)
-            if tt == TT_MP or tt is None:
-                result.mp_tasks = list(self._active_mps)
+            if tt == TT_MP or tt is None or tt is False:
+                if not tt is False:
+                    result.mp_tasks = list(self._active_mps)
                 result.mp_tasks_count = len(result.mp_tasks)
             if aloops:
                 result.aloops = self.aloops.copy()
             if schedulers:
                 result.schedulers = self._schedulers.copy()
-            result.tasks = {}
-            for n, v in self._tasks.items():
-                if tt is None or v.tt == tt:
-                    result.tasks[n] = v
+            if tt != False:
+                result.tasks = {}
+                for n, v in self._tasks.items():
+                    if tt is None or v.tt == tt:
+                        result.tasks[n] = v
         return result
 
     def get_aloops(self):
