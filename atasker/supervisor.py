@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.21"
+__version__ = "0.3.22"
 
 import threading
 import multiprocessing
@@ -426,7 +426,7 @@ class TaskSupervisor:
             result.tasks = {}
             for n, v in self._tasks.items():
                 if tt is None or v.tt == tt:
-                    result.tasks[n] = (v)
+                    result.tasks[n] = v
         return result
 
     def get_aloops(self):
@@ -436,6 +436,14 @@ class TaskSupervisor:
     def get_schedulers(self):
         with self._lock:
             return self._schedulers.copy()
+
+    def get_tasks(self, tt=None):
+        result = {}
+        with self._lock:
+            for n, v in self._tasks.items():
+                if tt is None or v.tt == tt:
+                    result[n] = v
+        return result
 
     def mark_task_started(self, task):
         with self._lock:
