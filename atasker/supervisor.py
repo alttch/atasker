@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.23"
+__version__ = "0.3.24"
 
 import threading
 import multiprocessing
@@ -52,7 +52,7 @@ _priorities = {
 
 class Task:
 
-    def __init__(self, tt, task_id, priority, task, delay):
+    def __init__(self, tt, task_id, priority, task, delay=None, worker=None):
         self.id = task_id
         self.tt = tt
         self.task = task
@@ -61,6 +61,7 @@ class Task:
         self.time_started = None
         self.status = TASK_STATUS_QUEUED
         self.delay = delay
+        self.worker = worker
 
     def __cmp__(self, other):
         return cmp(self.priority, other.priority) if \
@@ -249,14 +250,15 @@ class TaskSupervisor:
                  priority=TASK_NORMAL,
                  delay=None,
                  tt=TT_THREAD,
-                 task_id=None):
+                 task_id=None,
+                 worker=None):
         if not self._started.is_set() or not self._active or task is None:
             return
         if task_id is None:
             task_id = str(uuid.uuid4())
         if tt == TT_THREAD:
             task._atask_id = task_id
-        ti = Task(tt, task_id, priority, task, delay)
+        ti = Task(tt, task_id, priority, task, delay, worker)
         ti.time_queued = time.time()
         with self._lock:
             self._tasks[task_id] = ti

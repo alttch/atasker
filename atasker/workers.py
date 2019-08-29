@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.23"
+__version__ = "0.3.24"
 
 import threading
 import logging
@@ -159,7 +159,7 @@ class BackgroundWorker:
                              kwargs=self._task_kwargs)
         if self.daemon:
             t.setDaemon(True)
-        self.supervisor.put_task(t, self.priority)
+        self.supervisor.put_task(t, self.priority, worker=self)
         self._started.wait()
         self.supervisor.register_sync_scheduler(self)
 
@@ -335,7 +335,8 @@ class BackgroundAsyncWorker(BackgroundWorker):
                 (self.run, args + self._task_args, self._task_kwargs,
                  self._cb_mp),
                 self.priority,
-                tt=TT_MP)
+                tt=TT_MP,
+                worker=self)
             self._current_executor = task_id
             return task_id is not None and self._active
         else:
@@ -346,7 +347,8 @@ class BackgroundAsyncWorker(BackgroundWorker):
             self._current_executor = t
             if self.daemon:
                 t.setDaemon(True)
-            return self.supervisor.put_task(t, self.priority) and self._active
+            return self.supervisor.put_task(t, self.priority,
+                                            worker=self) and self._active
 
 
 class BackgroundQueueWorker(BackgroundAsyncWorker):
