@@ -91,7 +91,7 @@ task_supervisor.stop()
 ### Background task
 
 ```python
-from atasker import background task, TASK_LOW, TASK_HIGH
+from atasker import background_task, TASK_LOW, TASK_HIGH
 
 # with annotation
 @background_task
