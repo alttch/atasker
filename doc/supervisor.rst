@@ -267,7 +267,7 @@ launch:
 .. code:: python
 
     t = threading.Thread(target=myfunc)
-    task_id = task_supervisor.put_task(t, priority=TASK_NORMAL, delay=None)
+    task = task_supervisor.put_task(t, priority=TASK_NORMAL, delay=None)
 
 If *delay* is specified, the thread is started after the corresponding delay
 (seconds).
@@ -276,7 +276,7 @@ After the function thread is finished, it should notify task supervisor:
 
 .. code:: python
 
-    task_supervisor.mark_task_completed(task_id=task_id)
+    task_supervisor.mark_task_completed(task=task) # or task_id = task.id
 
 If no *task_id* specified, current thread ID is being used:
 

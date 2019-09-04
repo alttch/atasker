@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.27"
+__version__ = "0.4.0"
 
 import threading
 import logging
@@ -168,7 +168,7 @@ class BackgroundWorker:
         self.stop(wait=False)
 
     def _cb_mp(self, result):
-        self.supervisor.mark_task_completed(task_id=self._current_executor,
+        self.supervisor.mark_task_completed(task=self._current_executor,
                                             tt=TT_MP)
         if self.process_result(result) is False:
             self._abort()
@@ -331,14 +331,14 @@ class BackgroundAsyncWorker(BackgroundWorker):
             self._current_executor = None
             return result is not False and self._active
         elif self._run_in_mp:
-            task_id = self.supervisor.put_task(
+            task = self.supervisor.put_task(
                 (self.run, args + self._task_args, self._task_kwargs,
                  self._cb_mp),
                 self.priority,
                 tt=TT_MP,
                 worker=self)
-            self._current_executor = task_id
-            return task_id is not None and self._active
+            self._current_executor = task
+            return task is not None and self._active
         else:
             t = threading.Thread(target=self._run,
                                  name=self.name + '_run',

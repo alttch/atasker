@@ -3,7 +3,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.27"
+__version__ = "0.4.0"
 
 from pathlib import Path
 
@@ -23,6 +23,9 @@ result = SimpleNamespace(g=None,
                          background_task_thread_critical=None,
                          background_task_mp=None,
                          background_worker=0,
+                         wait1=None,
+                         wait2=None,
+                         wait3=None,
                          background_interval_worker=0,
                          background_interval_worker_async_ex=0,
                          background_queue_worker=0,
@@ -40,7 +43,7 @@ def wait():
 
 
 from atasker import task_supervisor, background_task, background_worker
-from atasker import TT_MP, TASK_CRITICAL
+from atasker import TT_MP, TASK_CRITICAL, wait_completed
 
 from atasker import FunctionCollection, TaskCollection, g
 
@@ -259,6 +262,27 @@ class Test(unittest.TestCase):
         wait()
         self.assertEqual(result.test_aloop_background_task, 1)
         self.assertEqual(a.run(t2(2)), 4)
+
+    def test_wait_completed(self):
+
+        @background_task
+        def t1():
+            time.sleep(0.1)
+            result.wait1 = 1
+
+        @background_task
+        def t2():
+            time.sleep(0.2)
+            result.wait2 = 2
+
+        @background_task
+        def t3():
+            time.sleep(0.3)
+            result.wait3 = 3
+
+        tasks = [t1(), t2(), t3()]
+        wait_completed(tasks)
+        self.assertEqual(result.wait1 + result.wait2 + result.wait3, 6)
 
 
 task_supervisor.set_thread_pool(pool_size=20, reserve_normal=5, reserve_high=5)

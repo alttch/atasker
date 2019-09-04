@@ -14,7 +14,7 @@ Defining task with annotation
     def mytask():
         print('I am working in the background!')
 
-    task_id = mytask()
+    task = mytask()
 
 It's not required to notify task supervisor about task completion,
 *background_task* will do this automatically as soon as task function is
@@ -34,7 +34,7 @@ To start task function without annotation, you must manually decorate it:
     def mytask():
         print('I am working in the background!')
 
-    task_id = background_task(mytask, name='mytask', priority=TASK_LOW)()
+    task = background_task(mytask, name='mytask', priority=TASK_LOW)()
 
 .. automodule:: atasker
 .. autofunction:: background_task
@@ -52,7 +52,7 @@ To put task into :ref:`multiprocessing pool<create_mp_pool>`, append parameter
 
     from atasker import TASK_HIGH, TT_MP
 
-    task_id = background_task(
+    task = background_task(
         tests.mp.test, priority=TASK_HIGH, tt=TT_MP)(1, 2, 3, x=2)
 
 Optional parameter *callback* can be used to specify function which handles
@@ -81,13 +81,14 @@ You may put task from your coroutine, without using callback, example:
 Task info
 =========
 
-Task id can later be used to obtain task info:
+If you saved only task.id but not the whole object, you may later obtain Task
+object again:
 
 .. code:: python
 
    from atasker import task_supervisor
 
-   task_info = task_supervisor.get_task_info(task_id)
+   task_info = task_supervisor.get_task_info(task.id)
 
 Task info object fields:
 
@@ -101,3 +102,17 @@ Task info object fields:
 
 If task info is *None*, consider the task is completed and supervisor destroyed
 information about it.
+
+Wait completed
+==============
+
+You may wait until pack of tasks is completed with the following method:
+
+.. code:: python
+
+   from atasker import wait_completed
+
+   wait_completed([task1, task2, task3 .... ], timeout=None)
+
+The method return *True* if all tasks are finished, or *False* if timeout was
+specified but some tasks are not finished.

@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.3.27"
+__version__ = "0.4.0"
 
 import threading
 import multiprocessing
@@ -28,6 +28,7 @@ TT_MP = 2
 TASK_STATUS_QUEUED = 0
 TASK_STATUS_DELAYED = 2
 TASK_STATUS_STARTED = 100
+TASK_STATUS_COMPLETED = 200
 TASK_STATUS_CANCELED = -1
 
 logger = logging.getLogger('atasker')
@@ -62,6 +63,8 @@ class Task:
         self.status = TASK_STATUS_QUEUED
         self.delay = delay
         self.worker = worker
+        self.started = threading.Event()
+        self.completed = threading.Event()
 
     def __cmp__(self, other):
         return cmp(self.priority, other.priority) if \
@@ -74,6 +77,20 @@ class Task:
     def __gt__(self, other):
         return (self.priority > other.priority) if \
                 other is not None else True
+
+    def is_started(self):
+        return self.started.is_set()
+
+    def is_completed(self):
+        return self.completed.is_set()
+
+    def mark_started(self):
+        self.status = TASK_STATUS_STARTED
+        self.started.set()
+
+    def mark_completed(self):
+        self.status = TASK_STATUS_COMPLETED
+        self.completed.set()
 
 
 class ALoop:
@@ -272,7 +289,7 @@ class TaskSupervisor:
             else:
                 q = self._Qmp[priority]
             asyncio.run_coroutine_threadsafe(q.put(ti), loop=self.event_loop)
-        return task_id
+        return ti
 
     async def _task_processor(self, queue, priority, tt):
         logger.debug('task processor {}/{} started'.format(tt, priority))
@@ -472,11 +489,11 @@ class TaskSupervisor:
         with self._lock:
             task.time_started = time.time()
             if not task.delay:
-                task.status = TASK_STATUS_STARTED
+                task.mark_started()
         if task.delay:
             task.status = TASK_STATUS_DELAYED
             await asyncio.sleep(task.delay)
-            task.status = TASK_STATUS_STARTED
+            task.mark_started()
         if task.tt == TT_THREAD:
             task.task.start()
         elif task.tt == TT_MP:
@@ -496,6 +513,9 @@ class TaskSupervisor:
 
     def mark_task_completed(self, task=None, task_id=None, tt=None):
         with self._lock:
+            if isinstance(task, Task):
+                task_id = task.id
+                tt = task.tt
             if tt == TT_THREAD or (not task and not task_id) or isinstance(
                     task, threading.Thread):
                 if task_id and task_id in self._active_threads:
@@ -511,9 +531,10 @@ class TaskSupervisor:
                             format(task._atask_id, task,
                                    len(self._active_threads),
                                    self.thread_pool_size))
+                    self._tasks[task._atask_id].mark_completed()
                     del self._tasks[task._atask_id]
             else:
-                if task is None: task = task_id
+                if task is None or isinstance(task, Task): task = task_id
                 if task in self._active_mps:
                     self._active_mps.remove(task)
                     if debug:
@@ -521,6 +542,7 @@ class TaskSupervisor:
                             'removed task {}: {} mp pool size: {} / {}'.format(
                                 task, task, len(self._active_mps),
                                 self.mp_pool_size))
+                self._tasks[task].mark_completed()
                 del self._tasks[task]
         return True
 
