@@ -78,8 +78,8 @@ You may put task from your coroutine, without using callback, example:
 
 .. autofunction:: co_mp_apply
 
-Task info
-=========
+Task object
+===========
 
 If you saved only task.id but not the whole object, you may later obtain Task
 object again:
@@ -88,7 +88,7 @@ object again:
 
    from atasker import task_supervisor
 
-   task_info = task_supervisor.get_task_info(task.id)
+   task = task_supervisor.get_task(task.id)
 
 Task info object fields:
 
@@ -98,13 +98,23 @@ Task info object fields:
 * **priority** task priority
 * **time_queued** time when task was queued
 * **time_started** time when task was started
-* **status** 0 - queued, 1 - started, -1 - canceled
+* **status** task status
+      **0** queued
+      **2** delayed
+      **100** started
+      **200** completed
+      **-1** canceled
 
 If task info is *None*, consider the task is completed and supervisor destroyed
 information about it.
 
-Wait completed
-==============
+.. note::
+
+   As soon as task is marked as completed, supervisor no longer stores
+   information about it
+
+Wait until completed
+====================
 
 You may wait until pack of tasks is completed with the following method:
 
