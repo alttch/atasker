@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 import threading
 import time
@@ -16,7 +16,7 @@ from atasker import task_supervisor
 from atasker import TASK_NORMAL
 from atasker import TT_THREAD, TT_MP, TT_COROUTINE
 
-from atasker.supervisor import ALoop
+from atasker.supervisor import ALoop, Task
 
 
 class LocalProxy(threading.local):
@@ -205,13 +205,17 @@ def _background_task_thread_runner(f, supervisor, task_id, *args, **kwargs):
 
 
 def wait_completed(tasks, timeout=None):
+    '''
+    raises TimeoutError
+    '''
     t_to = (time.time() + timeout) if timeout else None
-    for t in tasks:
+    for t in [tasks] if isinstance(tasks, Task) else tasks:
         if timeout:
             t_wait = t_to - time.time()
-            if t_wait <= 0: return False
+            if t_wait <= 0: raise TimeoutError
         else:
             t_wait = None
         if not t.completed.wait(timeout=t_wait):
-            return False
-    return True
+            raise TimeoutError
+    return tasks.result if isinstance(tasks,
+                                      Task) else [x.result for x in tasks]

@@ -3,7 +3,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 from pathlib import Path
 
@@ -264,19 +264,19 @@ class Test(unittest.TestCase):
         def t1():
             return 777
 
-        t = background_task(t1)()
-        wait_completed([t])
-        self.assertEqual(t.result, 777)
+        def t2():
+            return 111
+
+        task1 = background_task(t1)()
+        task2 = background_task(t2)()
+        self.assertEqual(wait_completed((task1, task2)), [777, 111])
 
     def test_result_mp(self):
 
         from mp import test2
 
         t = background_task(test2, tt=TT_MP)()
-        wait_completed([t])
-        self.assertEqual(t.result, 999)
-
-
+        self.assertEqual(wait_completed(t), 999)
 
     def test_aloop_run(self):
 

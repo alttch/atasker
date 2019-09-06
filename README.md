@@ -91,20 +91,27 @@ task_supervisor.stop()
 ### Background task
 
 ```python
-from atasker import background_task, TASK_LOW, TASK_HIGH
+from atasker import background_task, TASK_LOW, TASK_HIGH, wait_completed
 
 # with annotation
 @background_task
 def mytask():
     print('I am working in the background!')
+    return 777
 
-mytask()
+task = mytask()
+
+# optional
+result = wait_completed(task)
+
+print(task.result) # 777
+print(result) # 777
 
 # with manual decoration
 def mytask2():
     print('I am working in the background too!')
 
-background_task(mytask2, priority=TASK_HIGH)()
+task = background_task(mytask2, priority=TASK_HIGH)()
 ```
 ### Async tasks
 
@@ -120,10 +127,12 @@ async def calc(a):
 
 # call from sync code
 
-# put coroutine and forget
-background_task(calc)(1)
+# put coroutine
+task = background_task(calc)(1)
 
-# get coroutine result
+wait_completed(task)
+
+# run coroutine and wait for result
 result = a1.run(calc(1))
 ```
 

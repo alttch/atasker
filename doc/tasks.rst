@@ -125,5 +125,8 @@ You may wait until pack of tasks is completed with the following method:
 
    wait_completed([task1, task2, task3 .... ], timeout=None)
 
-The method return *True* if all tasks are finished, or *False* if timeout was
-specified but some tasks are not finished.
+The method return list of task results if all tasks are finished, or raises
+*TimeoutError* if timeout was specified but some tasks are not finished.
+
+If you call method with a single task instead of list or tuple, single result
+is returned.
