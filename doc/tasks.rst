@@ -98,6 +98,7 @@ Task info object fields:
 * **priority** task priority
 * **time_queued** time when task was queued
 * **time_started** time when task was started
+* **result** task result
 * **status** task status
       **0** queued
       **2** delayed

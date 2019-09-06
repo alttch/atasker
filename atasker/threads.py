@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 import threading
 import time
@@ -149,6 +149,8 @@ def background_task(f, *args, **kwargs):
         def cbfunc(*args, **kwargs):
             if callable(callback):
                 callback(*args, **kwargs)
+            if args:
+                supervisor.get_task(task_id).result = args[0]
             supervisor.mark_task_completed(task_id=task_id)
 
         return cbfunc
@@ -169,14 +171,17 @@ def background_task(f, *args, **kwargs):
                 return asyncio.run_coroutine_threadsafe(f(*args, **kw),
                                                         loop=loop)
         elif tt == TT_THREAD:
+            task_id = str(uuid.uuid4())
             t = threading.Thread(group=kwargs.get('group'),
                                  target=_background_task_thread_runner,
                                  name=kwargs.get('name'),
-                                 args=(f, supervisor) + args,
+                                 args=(f, supervisor, task_id) + args,
                                  kwargs=kw)
             if kwargs.get('daemon'): t.setDaemon(True)
-            return supervisor.put_task(t, kwargs.get('priority', TASK_NORMAL),
-                                       kwargs.get('delay'))
+            return supervisor.put_task(t,
+                                       kwargs.get('priority', TASK_NORMAL),
+                                       kwargs.get('delay'),
+                                       task_id=task_id)
             return t
         elif tt == TT_MP:
             task_id = str(uuid.uuid4())
@@ -192,9 +197,9 @@ def background_task(f, *args, **kwargs):
     return start_task
 
 
-def _background_task_thread_runner(f, supervisor, *args, **kwargs):
+def _background_task_thread_runner(f, supervisor, task_id, *args, **kwargs):
     try:
-        f(*args, **kwargs)
+        supervisor.get_task(task_id).result = f(*args, **kwargs)
     finally:
         supervisor.mark_task_completed()
 

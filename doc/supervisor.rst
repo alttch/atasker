@@ -185,8 +185,8 @@ aloops have 2 methods to execute own coroutines:
 
 .. code:: python
 
-   # put coroutine to loop and forget
-   aloop.background_task(coro(args))
+   # put coroutine to loop
+   task = aloop.background_task(coro(args))
 
    # blocking wait for result from coroutine
    result = aloop.run(coro(args))

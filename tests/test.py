@@ -3,7 +3,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 from pathlib import Path
 
@@ -249,6 +249,35 @@ class Test(unittest.TestCase):
         t.stop()
         self.assertEqual(result.test_aloop, 'supervisor_aloop_test1')
 
+    def test_result_async(self):
+
+        def t1():
+            return 555
+
+        aloop = task_supervisor.create_aloop('test3')
+        t = background_task(t1, loop='test3')()
+        wait_completed([t])
+        self.assertEqual(t.result, 555)
+
+    def test_result_thread(self):
+
+        def t1():
+            return 777
+
+        t = background_task(t1)()
+        wait_completed([t])
+        self.assertEqual(t.result, 777)
+
+    def test_result_mp(self):
+
+        from mp import test2
+
+        t = background_task(test2, tt=TT_MP)()
+        wait_completed([t])
+        self.assertEqual(t.result, 999)
+
+
+
     def test_aloop_run(self):
 
         async def t1():
@@ -258,8 +287,8 @@ class Test(unittest.TestCase):
             return x * 2
 
         a = task_supervisor.create_aloop('test2')
-        background_task(t1, loop='test2')()
-        wait()
+        t = background_task(t1, loop='test2')()
+        wait_completed([t])
         self.assertEqual(result.test_aloop_background_task, 1)
         self.assertEqual(a.run(t2(2)), 4)
 

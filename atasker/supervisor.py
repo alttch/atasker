@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 import threading
 import multiprocessing
@@ -65,6 +65,7 @@ class Task:
         self.worker = worker
         self.started = threading.Event()
         self.completed = threading.Event()
+        self.result = None
 
     def __cmp__(self, other):
         return cmp(self.priority, other.priority) if \
@@ -103,11 +104,19 @@ class ALoop:
         self.thread = None
         self._started = threading.Event()
 
+    async def _coro_task(self, task):
+        task.time_queued = time.time()
+        task.time_started = task.time_queued
+        task.mark_started()
+        task.result = await task.task
+        task.mark_completed()
+
     def background_task(self, coro):
         if not self.is_active():
             raise RuntimeError('aloop {} is not active'.format(self.name))
-        asyncio.run_coroutine_threadsafe(coro, loop=self.loop)
-        return True
+        task = Task(TT_COROUTINE, str(uuid.uuid4()), TASK_NORMAL, coro)
+        asyncio.run_coroutine_threadsafe(self._coro_task(task), loop=self.loop)
+        return task
 
     def run(self, coro):
         if not self.is_active():
