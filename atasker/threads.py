@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 
 import threading
 import time
@@ -208,10 +208,10 @@ def wait_completed(tasks, timeout=None):
     '''
     raises TimeoutError
     '''
-    t_to = (time.time() + timeout) if timeout else None
+    t_to = (time.monotonic() + timeout) if timeout else None
     for t in [tasks] if isinstance(tasks, Task) else tasks:
         if timeout:
-            t_wait = t_to - time.time()
+            t_wait = t_to - time.monotonic()
             if t_wait <= 0: raise TimeoutError
         else:
             t_wait = None

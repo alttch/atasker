@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 
 import threading
 import multiprocessing
@@ -170,12 +170,12 @@ class ALoop:
             if isinstance(wait, bool):
                 to_wait = None
             else:
-                to_wait = time.time() + wait
+                to_wait = time.monotonic() + wait
             self._active = False
             asyncio.run_coroutine_threadsafe(self._set_stop_event(),
                                              loop=self.loop)
             while True:
-                if to_wait and time.time() > to_wait:
+                if to_wait and time.monotonic() > to_wait:
                     logger.warning(
                         'aloop {} wait timeout, canceling all tasks'.format(
                             self.name))
@@ -656,21 +656,21 @@ class TaskSupervisor:
         if isinstance(wait, bool):
             to_wait = None
         else:
-            to_wait = time.time() + wait
+            to_wait = time.monotonic() + wait
         if (to_wait or wait is True) and not cancel_tasks:
             while True:
                 with self._lock:
                     if not self._tasks:
                         break
                 time.sleep(self.poll_delay)
-                if to_wait and time.time() > to_wait: break
+                if to_wait and time.monotonic() > to_wait: break
         if debug: logger.debug('no task in queues')
         if to_wait or wait is True:
             if debug: logger.debug('waiting for tasks to finish')
             while True:
                 if not self._active_threads:
                     break
-                if to_wait and time.time() > to_wait:
+                if to_wait and time.monotonic() > to_wait:
                     logger.warning(
                         'wait timeout, skipping, hope threads will finish')
                     break
@@ -681,9 +681,8 @@ class TaskSupervisor:
         if to_wait or wait is True:
             while True:
                 with self._lock:
-                    if (not self._active_threads and
-                            not self._active_mps) or (to_wait and
-                                                      time.time() > to_wait):
+                    if (not self._active_threads and not self._active_mps) or (
+                            to_wait and time.monotonic() > to_wait):
                         break
                 time.sleep(self.poll_delay)
         if debug: logger.debug('no active threads/mps')
@@ -700,7 +699,7 @@ class TaskSupervisor:
         self._main_loop_active = False
         if wait is True or to_wait:
             while True:
-                if to_wait and time.time() > to_wait:
+                if to_wait and time.monotonic() > to_wait:
                     logger.warning('wait timeout, canceling all tasks')
                     self._cancel_all_tasks()
                     break

@@ -1,7 +1,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 
 import threading
 import logging
@@ -182,7 +182,7 @@ class BackgroundWorker:
         self.mark_started()
         while self._active:
             try:
-                self.last_executed = time.time()
+                self.last_executed = time.monotonic()
                 if self._run_in_mp:
                     self._current_executor = self.run
                     self.supervisor.mp_pool.apply_async(self.run, args, kwargs,
@@ -314,7 +314,7 @@ class BackgroundAsyncWorker(BackgroundWorker):
         self._executor_stop_event.set()
 
     async def launch_executor(self, *args, **kwargs):
-        self.last_executed = time.time()
+        self.last_executed = time.monotonic()
         if asyncio.iscoroutinefunction(self.run):
             self._current_executor = self.run
             if self.executor_loop:
@@ -469,7 +469,7 @@ class BackgroundIntervalWorker(BackgroundEventWorker):
 
     async def interval_loop(self, *args, **kwargs):
         while self._active:
-            if self.keep_interval: tstart = time.time()
+            if self.keep_interval: tstart = time.monotonic()
             if self._current_executor:
                 await self._executor_stop_event.wait()
                 self._executor_stop_event.clear()
@@ -482,7 +482,7 @@ class BackgroundIntervalWorker(BackgroundEventWorker):
             if not self.delay and not self.delay_before:
                 tts = self.poll_delay
             elif self.keep_interval:
-                tts = self.delay + tstart - time.time()
+                tts = self.delay + tstart - time.monotonic()
             else:
                 tts = self.delay
                 if self._current_executor:
@@ -493,7 +493,7 @@ class BackgroundIntervalWorker(BackgroundEventWorker):
                     await asyncio.sleep(tts)
                 else:
                     ttsi = int(tts)
-                    while self.last_executed + ttsi >= time.time():
+                    while self.last_executed + ttsi >= time.monotonic():
                         await asyncio.sleep(0.1)
                         if not self._active:
                             self._interval_loop_stopped.set()
