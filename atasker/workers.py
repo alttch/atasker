@@ -254,7 +254,9 @@ class BackgroundAsyncWorker(BackgroundWorker):
 
     def _start(self, *args, **kwargs):
         self.executor_loop = kwargs.get('_loop', self.executor_loop)
-        if not self.executor_loop and self.supervisor.default_aloop:
+        if isinstance(self.executor_loop, str):
+            self.executor_loop = self.supervisor.get_aloop(self.executor_loop)
+        elif not self.executor_loop and self.supervisor.default_aloop:
             self.executor_loop = self.supervisor.default_aloop
         if isinstance(self.executor_loop, ALoop):
             self.aloop = self.executor_loop
@@ -331,12 +333,11 @@ class BackgroundAsyncWorker(BackgroundWorker):
             self._current_executor = None
             return result is not False and self._active
         elif self._run_in_mp:
-            task = self.supervisor.put_task(
-                (self.run, args + self._task_args, self._task_kwargs,
-                 self._cb_mp),
-                self.priority,
-                tt=TT_MP,
-                worker=self)
+            task = self.supervisor.put_task((self.run, args + self._task_args,
+                                             self._task_kwargs, self._cb_mp),
+                                            self.priority,
+                                            tt=TT_MP,
+                                            worker=self)
             self._current_executor = task
             return task is not None and self._active
         else:
