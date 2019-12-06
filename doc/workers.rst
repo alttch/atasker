@@ -13,7 +13,7 @@ Worker parameters
 
 All workers support the following initial parameters:
 
-* **worker_name** worker name (default: name of executor function if specified,
+* **name** worker name (default: name of executor function if specified,
   otherwise: auto-generated UUID)
 
 * **func** executor function (default: *worker.run*)
@@ -44,12 +44,12 @@ Methods
 Overriding parameters at startup
 --------------------------------
 
-Initial parameters *worker_name*, *priority* and *o* can be overriden during
-worker startup (first two - as *_worker_name* and *_priority*)
+Initial parameters *name*, *priority* and *o* can be overriden during
+worker startup (first two - as *_name* and *_priority*)
 
 .. code:: python
 
-    myworker.start(_worker_name='worker1', _priority=atasker.TASK_LOW)
+    myworker.start(_name='worker1', _priority=atasker.TASK_LOW)
 
 Executor function
 -----------------
@@ -62,7 +62,7 @@ Executor function gets in args/kwargs:
 * all parameters *worker.start* has been started with.
 
 * **_worker** current worker object
-* **_worker_name** current worker name
+* **_name** current worker name
 * **_task_id** if executor function is started in multiprocessing pool - ID of
   current task (for thread pool, task id = thread name).
 

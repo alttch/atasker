@@ -45,7 +45,7 @@ class BackgroundWorker:
 
     # -----------------------
 
-    def __init__(self, worker_name=None, executor_func=None, **kwargs):
+    def __init__(self, name=None, executor_func=None, **kwargs):
         if executor_func:
             self.run = executor_func
             self._can_use_mp_pool = False
@@ -62,7 +62,7 @@ class BackgroundWorker:
         self.on_error_kwargs = kwargs.get('on_error_kwargs', {})
         self.supervisor = kwargs.get('supervisor', task_supervisor)
         self.poll_delay = kwargs.get('poll_delay', self.supervisor.poll_delay)
-        self.set_name(worker_name)
+        self.set_name(name)
         self._task_args = ()
         self._task_kwargs = {}
         self.start_stop_lock = threading.Lock()
@@ -140,8 +140,8 @@ class BackgroundWorker:
             else:
                 kw['_worker'] = self
             self.daemon = kwargs.get('daemon', True)
-            if not '_worker_name' in kw:
-                kw['_worker_name'] = self.name
+            if not '_name' in kw:
+                kw['_name'] = self.name
             if not 'o' in kw:
                 kw['o'] = self.o
             self._task_args = args
@@ -514,7 +514,7 @@ def background_worker(*args, **kwargs):
             del kw['name']
         else:
             name = func.__name__
-        f = C(worker_name=name, **kw)
+        f = C(name=name, **kw)
         f.run = func
         f._can_use_mp_pool = False
         return f
