@@ -302,17 +302,6 @@ class BackgroundAsyncWorker(BackgroundWorker):
             self._current_executor = None
             self._send_executor_stop_event()
 
-    async def _run_coroutine(self, *args, **kwargs):
-        try:
-            if await self.run(*(args + self._task_args), **
-                              self._task_kwargs) is False:
-                self._abort()
-        except Exception as e:
-            self.error(e)
-        finally:
-            self._current_executor = None
-            self._send_executor_stop_event()
-
     def _send_executor_stop_event(self):
         asyncio.run_coroutine_threadsafe(self._set_stop_event(),
                                          loop=self.worker_loop)
@@ -331,6 +320,7 @@ class BackgroundAsyncWorker(BackgroundWorker):
                 self.error(e)
                 result = None
             self._current_executor = None
+            if result is False: self._abort()
             return result is not False and self._active
         elif self._run_in_mp:
             task = self.supervisor.put_task((self.run, args + self._task_args,
@@ -363,8 +353,7 @@ class BackgroundQueueWorker(BackgroundAsyncWorker):
             self._qclass = asyncio.queues.Queue
 
     def put(self, t):
-        asyncio.run_coroutine_threadsafe(self._Q.put(t),
-                                         loop=self.worker_loop)
+        asyncio.run_coroutine_threadsafe(self._Q.put(t), loop=self.worker_loop)
 
     def send_stop_events(self):
         try:
