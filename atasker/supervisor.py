@@ -1,7 +1,7 @@
-__author__ = "Altertech Group, https://www.altertech.com/"
-__copyright__ = "Copyright (C) 2018-2019 Altertech Group"
-__license__ = "Apache License 2.0"
-__version__ = "0.4.5"
+__author__ = 'Altertech Group, https://www.altertech.com/'
+__copyright__ = 'Copyright (C) 2018-2019 Altertech Group'
+__license__ = 'Apache License 2.0'
+__version__ = "0.4.6"
 
 import threading
 import multiprocessing
@@ -571,12 +571,12 @@ class TaskSupervisor:
 
     async def _launch_scheduler_loop(self, scheduler):
         try:
-            t = self.event_loop.create_task(scheduler.loop())
+            t = scheduler.worker_loop.create_task(scheduler.loop())
             with self._lock:
                 self._schedulers[scheduler] = (scheduler, t)
             if hasattr(scheduler, 'extra_loops'):
                 for l in scheduler.extra_loops:
-                    self.event_loop.create_task(getattr(scheduler, l)())
+                    scheduler.worker_loop.create_task(getattr(scheduler, l)())
             await t
         except CancelledError:
             pass
@@ -606,8 +606,8 @@ class TaskSupervisor:
                 if r == RQ_SCHEDULER:
                     if debug:
                         logger.debug('new scheduler {}'.format(res))
-                    self.event_loop.create_task(
-                        self._launch_scheduler_loop(res))
+                    asyncio.run_coroutine_threadsafe(
+                        self._launch_scheduler_loop(res), loop=res.worker_loop)
             finally:
                 self._Q.task_done()
         for i, t in self._processors_stopped.items():

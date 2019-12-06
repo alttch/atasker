@@ -1,7 +1,7 @@
-__author__ = "Altertech Group, https://www.altertech.com/"
-__copyright__ = "Copyright (C) 2018-2019 Altertech Group"
-__license__ = "Apache License 2.0"
-__version__ = "0.4.5"
+__author__ = 'Altertech Group, https://www.altertech.com/'
+__copyright__ = 'Copyright (C) 2018-2019 Altertech Group'
+__license__ = 'Apache License 2.0'
+__version__ = "0.4.6"
 
 import threading
 import logging
@@ -244,11 +244,16 @@ class BackgroundAsyncWorker(BackgroundWorker):
         self.aloop = None
 
     def _register(self):
-        if not self.executor_loop and asyncio.iscoroutinefunction(self.run):
-            logger.warning(
-                ('{}: no executor loop defined, ' +
-                 'will start executor in supervisor event loop').format(
-                     self.name))
+        if asyncio.iscoroutinefunction(self.run):
+            if not self.executor_loop:
+                logger.warning(
+                    ('{}: no executor loop defined, ' +
+                     'will start executor in supervisor event loop').format(
+                         self.name))
+                self.executor_loop = self.supervisor.event_loop
+            self.worker_loop = self.executor_loop
+        else:
+            self.worker_loop = self.supervisor.event_loop
         self.supervisor.register_scheduler(self)
         self._started.wait()
 
@@ -310,7 +315,7 @@ class BackgroundAsyncWorker(BackgroundWorker):
 
     def _send_executor_stop_event(self):
         asyncio.run_coroutine_threadsafe(self._set_stop_event(),
-                                         loop=self.supervisor.event_loop)
+                                         loop=self.worker_loop)
 
     async def _set_stop_event(self):
         self._executor_stop_event.set()
@@ -319,17 +324,12 @@ class BackgroundAsyncWorker(BackgroundWorker):
         self.last_executed = time.perf_counter()
         if asyncio.iscoroutinefunction(self.run):
             self._current_executor = self.run
-            if self.executor_loop:
-                asyncio.run_coroutine_threadsafe(self._run_coroutine(*args),
-                                                 loop=self.executor_loop)
-                return True
-            else:
-                try:
-                    result = await self.run(*(args + self._task_args),
-                                            **self._task_kwargs)
-                except Exception as e:
-                    self.error(e)
-                    result = None
+            try:
+                result = await self.run(*(args + self._task_args),
+                                        **self._task_kwargs)
+            except Exception as e:
+                self.error(e)
+                result = None
             self._current_executor = None
             return result is not False and self._active
         elif self._run_in_mp:
@@ -364,7 +364,7 @@ class BackgroundQueueWorker(BackgroundAsyncWorker):
 
     def put(self, t):
         asyncio.run_coroutine_threadsafe(self._Q.put(t),
-                                         loop=self.supervisor.event_loop)
+                                         loop=self.worker_loop)
 
     def send_stop_events(self):
         try:
@@ -405,7 +405,7 @@ class BackgroundEventWorker(BackgroundAsyncWorker):
         if self._current_executor and not force:
             return
         asyncio.run_coroutine_threadsafe(self._set_event(),
-                                         loop=self.supervisor.event_loop)
+                                         loop=self.worker_loop)
 
     async def _set_event(self):
         self._E.set()
