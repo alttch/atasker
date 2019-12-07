@@ -431,7 +431,7 @@ class TaskSupervisor:
                 logger.error(
                     'async job_scheduler {} already exists'.format(name))
                 return False
-        l = AsyncJobScheduler()
+        l = AsyncJobScheduler(name)
         if aloop is None:
             aloop = self.default_aloop
         elif not isinstance(aloop, ALoop):
