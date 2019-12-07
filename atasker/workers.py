@@ -398,9 +398,9 @@ class BackgroundEventWorker(BackgroundAsyncWorker):
             asyncio.run_coroutine_threadsafe(self._set_event(),
                                              loop=self.worker_loop)
 
-    def trigger(self, force=False):
+    async def trigger(self, force=False):
         if not self._current_executor or force:
-            self._set_event()
+            await self._set_event()
 
     async def _set_event(self):
         self._E.set()
