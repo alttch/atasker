@@ -1,4 +1,4 @@
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 
 import setuptools
 
@@ -17,7 +17,7 @@ setuptools.setup(
     url='https://github.com/alttch/atasker',
     packages=setuptools.find_packages(),
     license='Apache License 2.0',
-    install_requires=[],
+    install_requires=['aiosched'],
     classifiers=(
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: Apache Software License',

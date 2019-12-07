@@ -5,6 +5,7 @@
 
     supervisor
     tasks
+    async_jobs
     workers
     collections
     localproxy

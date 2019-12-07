@@ -33,7 +33,9 @@ result = SimpleNamespace(g=None,
                          locker_success=False,
                          locker_failed=False,
                          test_aloop=None,
-                         test_aloop_background_task=None)
+                         test_aloop_background_task=None,
+                         async_js1=0,
+                         async_js2=0)
 
 sys.path.insert(0, Path().absolute().parent.as_posix())
 
@@ -312,6 +314,36 @@ class Test(unittest.TestCase):
         tasks = [t1(), t2(), t3()]
         wait_completed(tasks)
         self.assertEqual(result.wait1 + result.wait2 + result.wait3, 6)
+
+    def test_async_job_scheduler(self):
+
+        async def test1():
+            result.async_js1 += 1
+
+        async def test2():
+            result.async_js2 += 1
+
+        task_supervisor.create_aloop('jobs')
+        task_supervisor.create_async_job_scheduler('default',
+                                                   aloop='jobs',
+                                                   default=True)
+        j1 = task_supervisor.create_async_job(target=test1, interval=0.01)
+        j2 = task_supervisor.create_async_job(target=test2, interval=0.01)
+
+        time.sleep(0.1)
+
+        task_supervisor.cancel_async_job(job=j2)
+
+        r1 = result.async_js1
+        r2 = result.async_js2
+
+        self.assertGreater(r1, 9)
+        self.assertGreater(r2, 9)
+
+        time.sleep(0.1)
+
+        self.assertLess(r1, result.async_js1)
+        self.assertEqual(r2, result.async_js2)
 
 
 task_supervisor.set_thread_pool(pool_size=20, reserve_normal=5, reserve_high=5)

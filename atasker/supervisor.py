@@ -11,6 +11,7 @@ import asyncio
 import uuid
 
 from concurrent.futures import CancelledError
+from aiosched import AsyncJobScheduler
 
 debug = False
 
@@ -224,10 +225,12 @@ class TaskSupervisor:
         self._Qt = {}
         self._Qmp = {}
         self.default_aloop = None
+        self.default_async_job_scheduler = None
         self.mp_pool = None
         self.daemon = False
         self._processors_stopped = {}
         self.aloops = {}
+        self.async_job_schedulers = {}
 
         self.set_thread_pool(pool_size=thread_pool_default_size,
                              reserve_normal=default_reserve_normal,
@@ -347,6 +350,25 @@ class TaskSupervisor:
                                          loop=self.event_loop)
         return True
 
+    def create_async_job(self, async_job_scheduler=None, **kwargs):
+        if async_job_scheduler is None:
+            async_job_scheduler = self.default_async_job_scheduler
+        elif isinstance(async_job_scheduler, str):
+            async_job_scheduler = self.async_job_schedulers[async_job_scheduler]
+        return async_job_scheduler.create_threadsafe(**kwargs)
+
+    def cancel_async_job(self, async_job_scheduler=None, job=None):
+        if job:
+            if async_job_scheduler is None:
+                async_job_scheduler = self.default_async_job_scheduler
+            elif isinstance(async_job_scheduler, str):
+                async_job_scheduler = self.async_job_schedulers[
+                    async_job_scheduler]
+            async_job_scheduler.cancel(job)
+        else:
+            logger.warning('supervisor async job cancellation ' +
+                           'requested but job not specified')
+
     def register_sync_scheduler(self, scheduler):
         with self._lock:
             self._schedulers[scheduler] = None
@@ -393,8 +415,46 @@ class TaskSupervisor:
                 self.set_default_aloop(l)
         return l
 
+    def create_async_job_scheduler(self,
+                                   name,
+                                   aloop=None,
+                                   start=True,
+                                   default=False):
+        """
+        Create async job scheduler (aiosched.scheduler)
+
+        ALoop must always be specified or default ALoop defined
+        """
+        if name == '__supervisor__':
+            raise RuntimeError('Name "__supervisor__" is reserved')
+        with self._lock:
+            if name in self.async_job_schedulers:
+                logger.error(
+                    'async job_scheduler {} already exists'.format(name))
+                return False
+        l = AsyncJobScheduler()
+        if aloop is None:
+            aloop = self.default_aloop
+        elif not isinstance(aloop, ALoop):
+            aloop = self.get_aloop(aloop)
+        loop = aloop.get_loop()
+        with self._lock:
+            self.async_job_schedulers[name] = l
+            if default:
+                self.set_default_async_job_scheduler(l)
+        if start:
+            l.set_loop(loop)
+            l._aloop = aloop
+            aloop.background_task(l.scheduler_loop())
+        else:
+            l.set_loop(loop)
+        return l
+
     def set_default_aloop(self, aloop):
         self.default_aloop = aloop
+
+    def set_default_async_job_scheduler(self, scheduler):
+        self.default_async_job_scheduler = scheduler
 
     def get_aloop(self, name=None, default=True):
         with self._lock:
@@ -426,7 +486,11 @@ class TaskSupervisor:
             if _lock:
                 self._lock.release()
 
-    def get_info(self, tt=None, aloops=True, schedulers=True):
+    def get_info(self,
+                 tt=None,
+                 aloops=True,
+                 schedulers=True,
+                 async_job_schedulers=True):
 
         class SupervisorInfo:
             pass
@@ -453,6 +517,8 @@ class TaskSupervisor:
                 result.aloops = self.aloops.copy()
             if schedulers:
                 result.schedulers = self._schedulers.copy()
+            if async_job_schedulers:
+                result.async_job_schedulers = self.async_job_schedulers.copy()
             if tt != False:
                 result.tasks = {}
                 for n, v in self._tasks.items():
@@ -641,9 +707,23 @@ class TaskSupervisor:
         for s in schedulers:
             s.stop(wait=wait)
 
+    def _stop_async_job_schedulers(self, wait=True):
+        with self._lock:
+            schedulers = self.async_job_schedulers.copy().items()
+        for i, s in schedulers:
+            try:
+                s.stop(wait=wait)
+            except:
+                pass
+
     def stop(self, wait=True, stop_schedulers=True, cancel_tasks=False):
         self._active = False
+        if isinstance(wait, bool):
+            to_wait = None
+        else:
+            to_wait = time.perf_counter() + wait
         if stop_schedulers:
+            self._stop_async_job_schedulers(wait)
             self._stop_schedulers(True if wait else False)
             if debug: logger.debug('schedulers stopped')
         with self._lock:
@@ -653,10 +733,6 @@ class TaskSupervisor:
                                 cancel_tasks=cancel_tasks,
                                 _lock=False)
             if debug: logger.debug('async loops stopped')
-        if isinstance(wait, bool):
-            to_wait = None
-        else:
-            to_wait = time.perf_counter() + wait
         if (to_wait or wait is True) and not cancel_tasks:
             while True:
                 with self._lock:
