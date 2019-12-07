@@ -350,21 +350,20 @@ class TaskSupervisor:
                                          loop=self.event_loop)
         return True
 
-    def create_async_job(self, async_job_scheduler=None, **kwargs):
-        if async_job_scheduler is None:
-            async_job_scheduler = self.default_async_job_scheduler
-        elif isinstance(async_job_scheduler, str):
-            async_job_scheduler = self.async_job_schedulers[async_job_scheduler]
-        return async_job_scheduler.create_threadsafe(**kwargs)
+    def create_async_job(self, scheduler=None, **kwargs):
+        if scheduler is None:
+            scheduler = self.default_async_job_scheduler
+        elif isinstance(scheduler, str):
+            scheduler = self.schedulers[scheduler]
+        return scheduler.create_threadsafe(**kwargs)
 
-    def cancel_async_job(self, async_job_scheduler=None, job=None):
+    def cancel_async_job(self, scheduler=None, job=None):
         if job:
-            if async_job_scheduler is None:
-                async_job_scheduler = self.default_async_job_scheduler
-            elif isinstance(async_job_scheduler, str):
-                async_job_scheduler = self.async_job_schedulers[
-                    async_job_scheduler]
-            async_job_scheduler.cancel(job)
+            if scheduler is None:
+                scheduler = self.default_async_job_scheduler
+            elif isinstance(scheduler, str):
+                scheduler = self.schedulers[scheduler]
+            scheduler.cancel(job)
         else:
             logger.warning('supervisor async job cancellation ' +
                            'requested but job not specified')
