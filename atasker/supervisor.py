@@ -354,7 +354,7 @@ class TaskSupervisor:
         if scheduler is None:
             scheduler = self.default_async_job_scheduler
         elif isinstance(scheduler, str):
-            scheduler = self.schedulers[scheduler]
+            scheduler = self.async_job_schedulers[scheduler]
         return scheduler.create_threadsafe(**kwargs)
 
     def cancel_async_job(self, scheduler=None, job=None):
@@ -362,7 +362,7 @@ class TaskSupervisor:
             if scheduler is None:
                 scheduler = self.default_async_job_scheduler
             elif isinstance(scheduler, str):
-                scheduler = self.schedulers[scheduler]
+                scheduler = self.async_job_schedulers[scheduler]
             scheduler.cancel(job)
         else:
             logger.warning('supervisor async job cancellation ' +
