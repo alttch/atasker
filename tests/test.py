@@ -182,9 +182,9 @@ class Test(unittest.TestCase):
             result.background_queue_worker += a
 
         t.start()
-        t.put(2)
-        t.put(3)
-        t.put(4)
+        t.put_threadsafe(2)
+        t.put_threadsafe(3)
+        t.put_threadsafe(4)
         wait()
         t.stop()
         self.assertEqual(result.background_queue_worker, 9)
@@ -196,9 +196,9 @@ class Test(unittest.TestCase):
             result.background_event_worker += 1
 
         t.start()
-        t.trigger()
+        t.trigger_threadsafe()
         wait()
-        t.trigger()
+        t.trigger_threadsafe()
         wait()
         t.stop()
         self.assertEqual(result.background_event_worker, 2)

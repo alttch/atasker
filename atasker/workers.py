@@ -352,12 +352,15 @@ class BackgroundQueueWorker(BackgroundAsyncWorker):
         else:
             self._qclass = asyncio.queues.Queue
 
-    def put(self, t):
+    def put_threadsafe(self, t):
         asyncio.run_coroutine_threadsafe(self._Q.put(t), loop=self.worker_loop)
+
+    async def put(self, t):
+        await self._Q.put(t)
 
     def send_stop_events(self):
         try:
-            self.put(None)
+            self.put_threadsafe(None)
         except:
             pass
 
@@ -390,11 +393,14 @@ class BackgroundQueueWorker(BackgroundAsyncWorker):
 
 class BackgroundEventWorker(BackgroundAsyncWorker):
 
+    def trigger_threadsafe(self, force=False):
+        if not self._current_executor or force:
+            asyncio.run_coroutine_threadsafe(self._set_event(),
+                                             loop=self.worker_loop)
+
     def trigger(self, force=False):
-        if self._current_executor and not force:
-            return
-        asyncio.run_coroutine_threadsafe(self._set_event(),
-                                         loop=self.worker_loop)
+        if not self._current_executor or force:
+            self._set_event()
 
     async def _set_event(self):
         self._E.set()
@@ -416,7 +422,7 @@ class BackgroundEventWorker(BackgroundAsyncWorker):
 
     def send_stop_events(self, *args, **kwargs):
         try:
-            self.trigger(force=True)
+            self.trigger_threadsafe(force=True)
         except:
             pass
 

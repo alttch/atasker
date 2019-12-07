@@ -167,8 +167,8 @@ worker2.start()
 worker3.start()
 worker4.start()
 
-worker3.put('todo1')
-worker4.trigger()
+worker3.put_threadsafe('todo1')
+worker4.trigger_threadsafe()
 
 from atasker import BackgroundIntervalWorker
 

@@ -143,7 +143,7 @@ methods from the module where the worker is started:
     worker = MyWorker()
     worker.start()
     # .....
-    worker.put('task')
+    worker.put_threadsafe('task')
     # .....
     worker.stop()
 
@@ -252,9 +252,9 @@ priority queue, specify its class instead of just *True*.
     f2.start()
     worker3 = MyWorker()
     worker3.start()
-    f.put('task 1')
-    f2.put('task 2')
-    worker3.put('task 3')
+    f.put_threadsafe('task 1')
+    f2.put_threadsafe('task 2')
+    worker3.put_threadsafe('task 3')
 
 **put** method is used to put task into worker's queue. The method is
 thread-safe.
@@ -289,11 +289,12 @@ param.
     f.start()
     worker3 = MyWorker()
     worker3.start()
-    f.trigger()
-    worker3.trigger()
+    f.trigger_threadsafe()
+    worker3.trigger_threadsafe()
 
-**trigger** method is used to put task into worker's queue. The method is
-thread-safe.
+**trigger_threadsafe** method is used to put task into worker's queue. The
+method is thread-safe. If worker is triggered from the same asyncio loop,
+**trigger** method can be used instead.
 
 BackgroundIntervalWorker
 ------------------------
@@ -328,5 +329,5 @@ detects one of the parameters above:
     myfunc2.start()
 
 As well as event worker, **BackgroundIntervalWorker** supports manual executor
-triggering with *worker.trigger()*
+triggering with *worker.trigger()* and *worker.trigger_threadsafe()*
 
