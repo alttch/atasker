@@ -3,7 +3,7 @@
 __author__ = "Altertech Group, https://www.altertech.com/"
 __copyright__ = "Copyright (C) 2018-2019 Altertech Group"
 __license__ = "Apache License 2.0"
-__version__ = "0.5.1"
+__version__ = "0.6.0"
 
 from pathlib import Path
 
