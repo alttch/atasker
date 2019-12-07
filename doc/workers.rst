@@ -25,8 +25,7 @@ All workers support the following initial parameters:
 * **o** special object, passed as-is to executor (e.g. object worker is running
   for)
 
-* **on_error** a function which is called as *func(e)*, if executor raises an
-  exception
+* **on_error** a function which is called, if executor raises an exception
 
 * **on_error_kwargs** kwargs for *on_error* function
 

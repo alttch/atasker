@@ -19,8 +19,9 @@ Simple collection of functions.
 
     from atasker import FunctionCollection, TASK_LOW, TASK_HIGH
 
-    def error(e, **kwargs):
-        print(e)
+    def error(**kwargs):
+       import traceback
+       traceback.print_exc()
 
     startup = FunctionCollection(on_error=error)
 

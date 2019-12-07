@@ -106,11 +106,9 @@ class BackgroundWorker:
         """
         return self._stopped.is_set()
 
-    def error(self, e):
+    def error(self):
         if self.on_error:
-            kwargs = self.on_error_kwargs.copy()
-            kwargs['e'] = e
-            self.on_error(**kwargs)
+            self.on_error(**self.on_error_kwargs)
         else:
             raise
 
@@ -192,8 +190,8 @@ class BackgroundWorker:
                 else:
                     if self.run(*args, **kwargs) is False:
                         return self._abort()
-            except Exception as e:
-                self.error(e)
+            except:
+                self.error()
         self.mark_stopped()
         self.supervisor.mark_task_completed()
 
@@ -295,8 +293,8 @@ class BackgroundAsyncWorker(BackgroundWorker):
                 if self.run(*(args + self._task_args), **
                             self._task_kwargs) is False:
                     self._abort()
-            except Exception as e:
-                self.error(e)
+            except:
+                self.error()
         finally:
             self.supervisor.mark_task_completed()
             self._current_executor = None
@@ -316,8 +314,8 @@ class BackgroundAsyncWorker(BackgroundWorker):
             try:
                 result = await self.run(*(args + self._task_args),
                                         **self._task_kwargs)
-            except Exception as e:
-                self.error(e)
+            except:
+                self.error()
                 result = None
             self._current_executor = None
             if result is False: self._abort()

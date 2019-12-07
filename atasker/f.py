@@ -54,10 +54,8 @@ class FunctionCollection:
         if f not in self._functions:
             self._functions.append(f)
             self._functions_with_priorities.append({
-                'p':
-                priority if priority else self.default_priority,
-                'f':
-                f
+                'p': priority if priority else self.default_priority,
+                'f': f
             })
 
     def remove(self, f):
@@ -73,8 +71,8 @@ class FunctionCollection:
                 if z['f'] is f:
                     self._functions_with_priorities.remove(z)
                     break
-        except Exception as e:
-            self.error(e)
+        except:
+            self.error()
 
     def run(self):
         """
@@ -109,15 +107,13 @@ class FunctionCollection:
                     result[k] = (e, traceback.format_exc())
                 else:
                     result[k] = None
-                self.error(e)
+                self.error()
                 all_ok = False
         return result, all_ok
 
-    def error(self, e):
+    def error(self):
         if self.on_error:
-            kwargs = self.on_error_kwargs.copy()
-            kwargs['e'] = e
-            self.on_error(**kwargs)
+            self.on_error(**self.on_error_kwargs)
         else:
             raise
 
@@ -149,8 +145,8 @@ class TaskCollection(FunctionCollection):
             result = {}
             self.threads.clear()
             all_ok = True
-            funclist = sorted(
-                self._functions_with_priorities, key=lambda k: k['p'])
+            funclist = sorted(self._functions_with_priorities,
+                              key=lambda k: k['p'])
             for fn in funclist:
                 f = fn['f']
                 t = threading.Thread(target=self._run_task, args=(f,))
@@ -183,7 +179,7 @@ class TaskCollection(FunctionCollection):
                 result = (e, traceback.format_exc())
             else:
                 result = None
-            self.error(e)
+            self.error()
             ok = False
         self.result_queue.put((k, result, ok))
         self.supervisor.mark_task_completed()
