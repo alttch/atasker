@@ -32,9 +32,12 @@ from atasker.co import co_mp_apply
 
 import atasker.supervisor
 import atasker.workers
+import aiosched
 
 g = LocalProxy()
+
 
 def set_debug(mode=True):
     atasker.supervisor.debug = mode
     atasker.workers.debug = mode
+    aiosched.set_debug(mode)
