@@ -33,9 +33,14 @@ async def co_mp_apply(f,
 
         async def run(self, *args, **kwargs):
             self._event = asyncio.Event()
-            task = (self.task_id, self.func, args, kwargs, self.callback)
-            return self.supervisor.put_task(
-                task, self.priority, self.delay, tt=TT_MP)
+            return self.supervisor.put_task(target=self.func,
+                                            args=args,
+                                            kwargs=kwargs,
+                                            callback=self.callback,
+                                            task_id=task_id,
+                                            priority=self.priority,
+                                            delay=self.delay,
+                                            tt=TT_MP)
 
         async def _set_event(self):
             self._event.set()
