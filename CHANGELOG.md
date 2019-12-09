@@ -1,4 +1,4 @@
-## 0.7
+## 0.7 (2019-12-09)
 
 * thread tasks execution moved to *ThreadPoolExecutor*
 
