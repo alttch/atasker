@@ -37,7 +37,6 @@ async def co_mp_apply(f,
                                             args=args,
                                             kwargs=kwargs,
                                             callback=self.callback,
-                                            task_id=task_id,
                                             priority=self.priority,
                                             delay=self.delay,
                                             tt=TT_MP)
@@ -46,7 +45,7 @@ async def co_mp_apply(f,
             self._event.set()
 
         def callback(self, result):
-            self.supervisor.mark_task_completed(self.task_id)
+            self.supervisor.mark_task_completed(self.task)
             self._result = result
             asyncio.run_coroutine_threadsafe(self._set_event(), loop=self._loop)
 
@@ -61,5 +60,5 @@ async def co_mp_apply(f,
     co.supervisor = supervisor if supervisor else task_supervisor
     co.func = f
     co._loop = asyncio.get_event_loop()
-    co.task_id = await co.run(args, kwargs)
-    return await co.get_result() if co.task_id else None
+    co.task = await co.run(args, kwargs)
+    return await co.get_result() if co.task else None
