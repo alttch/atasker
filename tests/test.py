@@ -49,7 +49,7 @@ from atasker import TT_MP, TASK_CRITICAL, wait_completed
 
 from atasker import FunctionCollection, TaskCollection, g
 
-from atasker import Locker
+from atasker import Locker, set_debug
 
 
 class Test(unittest.TestCase):
@@ -353,6 +353,7 @@ if __name__ == '__main__':
     try:
         if sys.argv[1] == 'debug':
             logging.basicConfig(level=logging.DEBUG)
+            set_debug()
     except:
         pass
     task_supervisor.start()
