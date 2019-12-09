@@ -44,7 +44,7 @@ def wait():
     time.sleep(0.1)
 
 
-from atasker import task_supervisor, background_task, background_worker, spawn
+from atasker import task_supervisor, background_task, background_worker
 from atasker import TT_MP, TASK_CRITICAL, wait_completed
 
 from atasker import FunctionCollection, TaskCollection, g
@@ -116,7 +116,7 @@ class Test(unittest.TestCase):
         def t(a, x):
             result.background_task_thread = a + x
 
-        spawn(t)(2, x=3)
+        background_task(t)(2, x=3)
         wait()
         self.assertEqual(result.background_task_thread, 5)
 
