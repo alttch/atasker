@@ -77,6 +77,9 @@ Parameters *min_size* and *max_size* set actual system thread pool size. If
 reserve_high*. It's recommended to set *max_size* slightly larger manually to
 have a space for critical tasks.
 
+By default, *max_size* is CPU count * 5. You may use argument *min_size='max'*
+to automatically set minimal pool size to max.
+
 .. note::
 
     pool size can be changed while task supervisor is running.
