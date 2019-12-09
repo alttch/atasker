@@ -72,6 +72,11 @@ object has free space for the task.
 
 To make pool size unlimited, set *pool_size=0*.
 
+Parameters *min_size* and *max_size* set actual system thread pool size. If
+*max_size* is not specified, it's set to *pool_size + reserve_normal +
+reserve_high*. It's recommended to set *max_size* slightly larger manually to
+have a space for critical tasks.
+
 .. note::
 
     pool size can be changed while task supervisor is running.

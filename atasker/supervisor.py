@@ -36,7 +36,7 @@ logger = logging.getLogger('atasker')
 
 default_poll_delay = 0.1
 
-thread_pool_default_size = multiprocessing.cpu_count()
+thread_pool_default_size = multiprocessing.cpu_count() * 5
 mp_pool_default_size = multiprocessing.cpu_count()
 default_reserve_normal = 5
 default_reserve_high = 5
@@ -272,15 +272,24 @@ class TaskSupervisor:
         self._max_threads[TASK_LOW] = self.thread_pool_size
         self._max_threads[
             TASK_NORMAL] = self.thread_pool_size + self.thread_reserve_normal
-        self._max_threads[TASK_HIGH] = self.thread_pool_size + \
+        thc= self.thread_pool_size + \
                 self.thread_reserve_normal + self.thread_reserve_high
+        self._max_threads[TASK_HIGH] = thc
+        self._prespawn_threads = kwargs.get('min_size', 0)
         max_size = kwargs.get('max_size')
+        if not max_size: max_size = thc
+        if max_size < self._prespawn_threads:
+            raise ValueError(
+                'min pool size ({}) can not be larger than max ({})'.format(
+                    self._prespawn_threads, max_size))
         self.thread_pool = ThreadPoolExecutor(
             max_workers=max_size,
             thread_name_prefix='supervisor_{}_pool'.format(self.id))
-        if max_size is not None and self._max_threads[TASK_HIGH] > max_size:
-            logger.warning(('supervisor {} executor thread pool max size is ' +
-                            'lower than reservations').format(self.id))
+        if self._max_threads[TASK_HIGH] > max_size:
+            logger.warning(
+                ('supervisor {} executor thread pool max size ({}) is ' +
+                 'lower than reservations ({})').format(
+                     self.id, max_size, self._max_threads[TASK_HIGH]))
 
     def set_mp_pool(self, **kwargs):
         for p in ['pool_size', 'reserve_normal', 'reserve_high']:
@@ -679,6 +688,10 @@ class TaskSupervisor:
         return True
 
     def start(self, daemon=None):
+
+        def _prespawn():
+            pass
+
         self._active = True
         self._main_loop_active = True
         t = threading.Thread(
@@ -686,6 +699,8 @@ class TaskSupervisor:
             target=self._start_event_loop,
             daemon=daemon if daemon is not None else self.daemon)
         t.start()
+        for i in range(self._prespawn_threads):
+            self.thread_pool.submit(_prespawn)
         self._started.wait()
 
     def block(self):
