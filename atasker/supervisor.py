@@ -886,4 +886,5 @@ class TaskSupervisor:
             for i, v in self._tasks.items():
                 v.status = TASK_STATUS_CANCELED
         self._started.clear()
+        self.thread_pool.shutdown()
         logger.info('supervisor {} stopped'.format(self.id))
