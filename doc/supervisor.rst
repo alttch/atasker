@@ -257,17 +257,16 @@ Custom task supervisor
 
     my_supervisor2 = MyTaskSupervisor()
 
-Putting own threads
-===================
+Putting own tasks
+=================
 
 If you can not use :doc:`background tasks<tasks>` for some reason, you may
-create *threading.Thread* object manually and put it to task supervisor to
-launch:
+put own tasks manually and put it to task supervisor to launch:
 
 .. code:: python
 
-    t = threading.Thread(target=myfunc)
-    task = task_supervisor.put_task(t, priority=TASK_NORMAL, delay=None)
+    task = task_supervisor.put_task(target=myfunc, args=(), kwargs={},
+      priority=TASK_NORMAL, delay=None)
 
 If *delay* is specified, the thread is started after the corresponding delay
 (seconds).
@@ -282,12 +281,12 @@ If no *task_id* specified, current thread ID is being used:
 
 .. code:: python
 
-    def mytask():
+   # note: custom task targets always get _task_id in kwargs
+    def mytask(**kwargs):
        # ... perform calculations
-      task_supervisor.mark_task_completed() 
+      task_supervisor.mark_task_completed(task_id=kwargs['_task_id'])
 
-    t = threading.Thread(target=mytask)
-    task_supervisor.put_task(t)
+    task_supervisor.put_task(target=mytask)
 
 .. note::
 
@@ -312,14 +311,8 @@ contains:
 
     from atasker import TT_MP
 
-    task = (
-        <somemodule.staticmethod>,
-        args,
-        kwargs,
-        callback
-    )
-
-    task_id = task_supervisor.put_task(task, tt=TT_MP)
+    task = task_supervisor.put_task(
+       target=<somemodule.staticmethod>, callback=<somefunc>, tt=TT_MP)
 
 After the function is finished, you should notify task supervisor:
 

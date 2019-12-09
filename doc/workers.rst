@@ -18,8 +18,6 @@ All workers support the following initial parameters:
 
 * **func** executor function (default: *worker.run*)
 
-* **daemon** worker executor will run as a daemon
-
 * **priority** worker thread priority
 
 * **o** special object, passed as-is to executor (e.g. object worker is running

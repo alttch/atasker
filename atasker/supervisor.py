@@ -272,9 +272,8 @@ class TaskSupervisor:
             max_workers=max_size,
             thread_name_prefix='supervisor_{}_pool'.format(self.id))
         if max_size is not None and self._max_threads[TASK_HIGH] > max_size:
-            logger.warning(
-                'supervisor {} executor thread pool max size is lower than reservations'
-                .format(self.id))
+            logger.warning(('supervisor {} executor thread pool max size is ' +
+                            'lower than reservations').format(self.id))
 
     def set_mp_pool(self, **kwargs):
         for p in ['pool_size', 'reserve_normal', 'reserve_high']:
