@@ -75,6 +75,8 @@ class Task:
         self.priority = priority
         self.time_queued = None
         self.time_started = None
+        self._tstarted = None
+        self._tqueued = None
         self.status = TASK_STATUS_QUEUED
         self.delay = delay
         self.worker = worker
@@ -123,6 +125,8 @@ class ALoop:
     async def _coro_task(self, task):
         task.time_queued = time.time()
         task.time_started = task.time_queued
+        task._tstarted = time.perf_counter()
+        task._tqueued = task._tstarted
         task.mark_started()
         task.result = await task.target
         task.mark_completed()
@@ -330,6 +334,7 @@ class TaskSupervisor:
                   worker=worker,
                   _send_task_id=_send_task_id)
         ti.time_queued = time.time()
+        ti._tqueued = time.perf_counter()
         with self._lock:
             self._tasks[ti.id] = ti
         if priority == TASK_CRITICAL:
@@ -611,6 +616,7 @@ class TaskSupervisor:
     async def _start_task(self, task):
         with self._lock:
             task.time_started = time.time()
+            task._tstarted = time.perf_counter()
             if not task.delay:
                 task.mark_started()
         if task.delay:
@@ -622,7 +628,7 @@ class TaskSupervisor:
         elif task.tt == TT_MP:
             self.mp_pool.apply_async(task.target, task.args, task.kwargs,
                                      task.callback)
-        time_spent = task.time_started - task.time_queued
+        time_spent = task._tstarted - task._tqueued
         if time_spent > self.timeout_critical:
             logger.critical(
                 self.timeout_message.format(supervisor_id=supervisor_id,
