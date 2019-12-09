@@ -354,19 +354,20 @@ class TaskSupervisor:
                 pool_size = self.thread_pool_size
             elif tt == TT_MP:
                 pool_size = self.mp_pool_size
-            self._lock.acquire()
-            try:
-                if tt == TT_THREAD:
-                    mx = self._max_threads[priority]
-                elif tt == TT_MP:
-                    mx = self._max_mps[priority]
-                while (self._get_active_count(tt) >= mx or
-                       self._higher_queues_busy(tt, priority)):
+            if pool_size:
+                self._lock.acquire()
+                try:
+                    if tt == TT_THREAD:
+                        mx = self._max_threads[priority]
+                    elif tt == TT_MP:
+                        mx = self._max_mps[priority]
+                    while (self._get_active_count(tt) >= mx or
+                           self._higher_queues_busy(tt, priority)):
+                        self._lock.release()
+                        await asyncio.sleep(self.poll_delay)
+                        self._lock.acquire()
+                finally:
                     self._lock.release()
-                    await asyncio.sleep(self.poll_delay)
-                    self._lock.acquire()
-            finally:
-                self._lock.release()
             self.mark_task_started(task)
             self.event_loop.create_task(self._start_task(task))
         logger.debug('supervisor {} task processor {}/{} finished'.format(
