@@ -36,6 +36,8 @@ import aiosched
 
 g = LocalProxy()
 
+spawn = background_task
+
 
 def set_debug(mode=True):
     atasker.supervisor.debug = mode

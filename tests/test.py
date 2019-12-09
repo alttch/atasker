@@ -37,14 +37,14 @@ result = SimpleNamespace(g=None,
                          async_js1=0,
                          async_js2=0)
 
-sys.path.insert(0, Path().absolute().parent.as_posix())
+sys.path.insert(0, Path(__file__).absolute().parents[1].as_posix())
 
 
 def wait():
     time.sleep(0.1)
 
 
-from atasker import task_supervisor, background_task, background_worker
+from atasker import task_supervisor, background_task, background_worker, spawn
 from atasker import TT_MP, TASK_CRITICAL, wait_completed
 
 from atasker import FunctionCollection, TaskCollection, g
@@ -116,7 +116,7 @@ class Test(unittest.TestCase):
         def t(a, x):
             result.background_task_thread = a + x
 
-        background_task(t)(2, x=3)
+        spawn(t)(2, x=3)
         wait()
         self.assertEqual(result.background_task_thread, 5)
 
