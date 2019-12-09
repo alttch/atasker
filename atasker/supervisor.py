@@ -277,7 +277,8 @@ class TaskSupervisor:
         self._max_threads[TASK_HIGH] = thc
         self._prespawn_threads = kwargs.get('min_size', 0)
         max_size = kwargs.get('max_size')
-        if not max_size: max_size = thc
+        if not max_size:
+            max_size = thc if self.thread_pool_size else thread_pool_default_size
         if max_size < self._prespawn_threads:
             raise ValueError(
                 'min pool size ({}) can not be larger than max ({})'.format(
