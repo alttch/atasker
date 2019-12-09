@@ -172,27 +172,29 @@ def background_task(f, *args, **kwargs):
                                                         loop=loop)
         elif tt == TT_THREAD:
             task_id = str(uuid.uuid4())
-            t = threading.Thread(group=kwargs.get('group'),
-                                 target=_background_task_thread_runner,
-                                 name=kwargs.get('name'),
-                                 args=(f, supervisor, task_id) + args,
-                                 kwargs=kw)
             if kwargs.get('daemon'): t.setDaemon(True)
-            return supervisor.put_task(t,
-                                       kwargs.get('priority', TASK_NORMAL),
-                                       kwargs.get('delay'),
-                                       task_id=task_id)
+            return supervisor.put_task(target=_background_task_thread_runner,
+                                       args=(f, supervisor, task_id) + args,
+                                       kwargs=kw,
+                                       priority=kwargs.get(
+                                           'priority', TASK_NORMAL),
+                                       delay=kwargs.get('delay'),
+                                       task_id=task_id,
+                                       _send_task_id=False)
             return t
         elif tt == TT_MP:
             task_id = str(uuid.uuid4())
-            task = (f, args, kw,
-                    gen_mp_callback(task_id, kwargs.get('callback'),
-                                    supervisor))
-            return supervisor.put_task(task,
-                                       kwargs.get('priority', TASK_NORMAL),
-                                       kwargs.get('delay'),
-                                       tt=TT_MP,
-                                       task_id=task_id)
+            return supervisor.put_task(
+                target=f,
+                args=args,
+                kwargs=kw,
+                callback=gen_mp_callback(task_id, kwargs.get('callback'),
+                                         supervisor),
+                priority=kwargs.get('priority', TASK_NORMAL),
+                delay=kwargs.get('delay'),
+                task_id=task_id,
+                tt=TT_MP,
+                _send_task_id=False)
 
     return start_task
 
@@ -201,7 +203,7 @@ def _background_task_thread_runner(f, supervisor, task_id, *args, **kwargs):
     try:
         supervisor.get_task(task_id).result = f(*args, **kwargs)
     finally:
-        supervisor.mark_task_completed()
+        supervisor.mark_task_completed(task_id=task_id)
 
 
 def wait_completed(tasks, timeout=None):

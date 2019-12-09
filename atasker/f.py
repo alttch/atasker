@@ -7,6 +7,7 @@ import traceback
 import threading
 import queue
 import time
+import uuid
 
 from atasker import task_supervisor
 from atasker import TASK_NORMAL
@@ -134,31 +135,28 @@ class TaskCollection(FunctionCollection):
         super().__init__(**kwargs)
         self.lock = threading.Lock()
         self.result_queue = queue.Queue()
-        self.threads = set()
         self.supervisor = kwargs.get('supervisor', task_supervisor)
         self.poll_delay = kwargs.get('poll_delay')
 
     def execute(self):
+        from atasker import wait_completed
         with self.lock:
             poll_delay = self.poll_delay if self.poll_delay else \
                     self.supervisor.poll_delay
             result = {}
-            self.threads.clear()
+            tasks = []
             all_ok = True
             funclist = sorted(self._functions_with_priorities,
                               key=lambda k: k['p'])
             for fn in funclist:
                 f = fn['f']
-                t = threading.Thread(target=self._run_task, args=(f,))
-                self.threads.add(t)
-                self.supervisor.put_task(t, fn['p'])
-            while True:
-                try:
-                    for t in self.threads:
-                        t.join()
-                    break
-                except RuntimeError:
-                    time.sleep(poll_delay)
+                task_id = str(uuid.uuid4())
+                tasks.append(self.supervisor.put_task(target=self._run_task,
+                                                      args=(f, task_id),
+                                                      priority=fn['p'],
+                                                      task_id=task_id,
+                             _send_task_id=False))
+            wait_completed(tasks)
             while True:
                 try:
                     k, res, ok = self.result_queue.get(block=False)
@@ -169,7 +167,7 @@ class TaskCollection(FunctionCollection):
                     break
             return result, all_ok
 
-    def _run_task(self, f):
+    def _run_task(self, f, task_id):
         k = '{}.{}'.format(f.__module__, f.__name__)
         try:
             result = f()
@@ -182,4 +180,4 @@ class TaskCollection(FunctionCollection):
             self.error()
             ok = False
         self.result_queue.put((k, result, ok))
-        self.supervisor.mark_task_completed()
+        self.supervisor.mark_task_completed(task_id=task_id)

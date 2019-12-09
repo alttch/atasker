@@ -56,6 +56,9 @@ all their public methods are thread-safe.
 **concurrent.futures** is a great standard Python library which allows you to
 execute specified tasks in a pool of workers.
 
+For thread-based tasks, **atasker** extends
+*concurrent.futures.ThreadPoolExecutor* functionality.
+
 **atasker** method *background_task* solves the same problem but in slightly
 different way, adding priorities to the tasks, while *atasker* workers do
 absolutely different job:
@@ -66,6 +69,7 @@ absolutely different job:
 * in *atasker* worker is an object, which continuously *generates* new tasks
   with the specified interval or on external event, and executes them in thread
   or multiprocessing pool.
+
 
 ## Code examples
 

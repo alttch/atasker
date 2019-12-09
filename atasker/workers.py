@@ -55,7 +55,6 @@ class BackgroundWorker:
         self._active = False
         self._started = threading.Event()
         self._stopped = threading.Event()
-        self.daemon = kwargs.get('daemon', True)
         self.priority = kwargs.get('priority', TASK_NORMAL)
         self.o = kwargs.get('o')
         self.on_error = kwargs.get('on_error')
@@ -137,7 +136,6 @@ class BackgroundWorker:
                 if debug: logger.debug(self.name + ' will use mp pool')
             else:
                 kw['_worker'] = self
-            self.daemon = kwargs.get('daemon', True)
             if not '_name' in kw:
                 kw['_name'] = self.name
             if not 'o' in kw:
@@ -151,13 +149,11 @@ class BackgroundWorker:
             self.start_stop_lock.release()
 
     def _start(self, *args, **kwargs):
-        t = threading.Thread(name=self.name,
-                             target=self.loop,
-                             args=self._task_args,
-                             kwargs=self._task_kwargs)
-        if self.daemon:
-            t.setDaemon(True)
-        self.supervisor.put_task(t, self.priority, worker=self)
+        self.supervisor.put_task(target=self.loop,
+                                 args=self._task_args,
+                                 kwargs=self._task_kwargs,
+                                 priority=self.priority,
+                                 worker=self)
         self._started.wait()
         self.supervisor.register_sync_scheduler(self)
 
@@ -166,8 +162,7 @@ class BackgroundWorker:
         self.stop(wait=False)
 
     def _cb_mp(self, result):
-        self.supervisor.mark_task_completed(task=self._current_executor,
-                                            tt=TT_MP)
+        self.supervisor.mark_task_completed(task=self._current_executor)
         if self.process_result(result) is False:
             self._abort()
         self._current_executor = None
@@ -193,7 +188,7 @@ class BackgroundWorker:
             except:
                 self.error()
         self.mark_stopped()
-        self.supervisor.mark_task_completed()
+        self.supervisor.mark_task_completed(task_id=kwargs['_task_id'])
 
     def mark_started(self):
         self._started.set()
@@ -287,16 +282,15 @@ class BackgroundAsyncWorker(BackgroundWorker):
             await asyncio.sleep(self.supervisor.poll_delay)
         self.mark_stopped()
 
-    def _run(self, *args):
+    def _run(self, *args, **kwargs):
         try:
             try:
-                if self.run(*(args + self._task_args), **
-                            self._task_kwargs) is False:
+                if self.run(*args, **kwargs) is False:
                     self._abort()
             except:
                 self.error()
         finally:
-            self.supervisor.mark_task_completed()
+            self.supervisor.mark_task_completed(task=self._current_executor)
             self._current_executor = None
             self._send_executor_stop_event()
 
@@ -321,23 +315,25 @@ class BackgroundAsyncWorker(BackgroundWorker):
             if result is False: self._abort()
             return result is not False and self._active
         elif self._run_in_mp:
-            task = self.supervisor.put_task((self.run, args + self._task_args,
-                                             self._task_kwargs, self._cb_mp),
-                                            self.priority,
+            task = self.supervisor.put_task(target=self.run,
+                                            args=args + self._task_args,
+                                            kwargs=self._task_kwargs,
+                                            callback=self._cb_mp,
+                                            priority=self.priority,
                                             tt=TT_MP,
                                             worker=self)
             self._current_executor = task
             return task is not None and self._active
         else:
-            t = threading.Thread(target=self._run,
-                                 name=self.name + '_run',
-                                 args=args,
-                                 kwargs=kwargs)
-            self._current_executor = t
-            if self.daemon:
-                t.setDaemon(True)
-            return self.supervisor.put_task(t, self.priority,
-                                            worker=self) and self._active
+            task = self.supervisor.put_task(target=self._run,
+                                            args=args + self._task_args,
+                                            kwargs=self._task_kwargs,
+                                            callback=self._cb_mp,
+                                            priority=self.priority,
+                                            tt=TT_THREAD,
+                                            worker=self)
+            self._current_executor = task
+            return task is not None and self._active
 
 
 class BackgroundQueueWorker(BackgroundAsyncWorker):

@@ -10,7 +10,7 @@ import logging
 import asyncio
 import uuid
 
-from concurrent.futures import CancelledError
+from concurrent.futures import CancelledError, ThreadPoolExecutor
 from aiosched import AsyncJobScheduler
 
 debug = False
@@ -54,10 +54,23 @@ _priorities = {
 
 class Task:
 
-    def __init__(self, tt, task_id, priority, task, delay=None, worker=None):
-        self.id = task_id
+    def __init__(self,
+                 tt,
+                 task_id=None,
+                 priority=TASK_NORMAL,
+                 target=None,
+                 args=(),
+                 kwargs={},
+                 callback=None,
+                 delay=None,
+                 worker=None, _send_task_id=True):
+        self.id = task_id if task_id is not None else str(uuid.uuid4())
         self.tt = tt
-        self.task = task
+        self.target = target
+        self.args = args
+        self.kwargs = kwargs if kwargs else {}
+        if _send_task_id: self.kwargs['_task_id'] = self.id
+        self.callback = callback
         self.priority = priority
         self.time_queued = None
         self.time_started = None
@@ -109,7 +122,7 @@ class ALoop:
         task.time_queued = time.time()
         task.time_started = task.time_queued
         task.mark_started()
-        task.result = await task.task
+        task.result = await task.target
         task.mark_completed()
 
     def background_task(self, coro):
@@ -212,7 +225,6 @@ class TaskSupervisor:
         self.timeout_critical_func = None
 
         self._active_threads = set()
-        self._active_threads_by_t = set()
         self._active_mps = set()
         self._active = False
         self._main_loop_active = False
@@ -234,7 +246,8 @@ class TaskSupervisor:
 
         self.set_thread_pool(pool_size=thread_pool_default_size,
                              reserve_normal=default_reserve_normal,
-                             reserve_high=default_reserve_high)
+                             reserve_high=default_reserve_high,
+                             max_size=None)
 
     def set_thread_pool(self, **kwargs):
         for p in ['pool_size', 'reserve_normal', 'reserve_high']:
@@ -245,6 +258,8 @@ class TaskSupervisor:
             TASK_NORMAL] = self.thread_pool_size + self.thread_reserve_normal
         self._max_threads[TASK_HIGH] = self.thread_pool_size + \
                 self.thread_reserve_normal + self.thread_reserve_high
+        self.thread_pool = ThreadPoolExecutor(
+            max_workers=kwargs.get('max_size'))
 
     def set_mp_pool(self, **kwargs):
         for p in ['pool_size', 'reserve_normal', 'reserve_high']:
@@ -275,22 +290,29 @@ class TaskSupervisor:
             return False
 
     def put_task(self,
-                 task,
+                 target,
+                 args=(),
+                 kwargs={},
+                 callback=None,
                  priority=TASK_NORMAL,
                  delay=None,
                  tt=TT_THREAD,
                  task_id=None,
-                 worker=None):
-        if not self._started.is_set() or not self._active or task is None:
+                 worker=None, _send_task_id=True):
+        if not self._started.is_set() or not self._active or target is None:
             return
-        if task_id is None:
-            task_id = str(uuid.uuid4())
-        if tt == TT_THREAD:
-            task._atask_id = task_id
-        ti = Task(tt, task_id, priority, task, delay, worker)
+        ti = Task(tt,
+                  task_id,
+                  priority=priority,
+                  target=target,
+                  args=args,
+                  kwargs=kwargs,
+                  callback=callback,
+                  delay=delay,
+                  worker=worker, _send_task_id=_send_task_id)
         ti.time_queued = time.time()
         with self._lock:
-            self._tasks[task_id] = ti
+            self._tasks[ti.id] = ti
         if priority == TASK_CRITICAL:
             self.mark_task_started(ti)
             asyncio.run_coroutine_threadsafe(self._start_task(ti),
@@ -506,7 +528,6 @@ class TaskSupervisor:
             if tt == TT_THREAD or tt is None or tt is False:
                 if not tt is False:
                     result.thread_tasks = list(self._active_threads)
-                    result.threads_active = list(self._active_threads_by_t)
                 result.thread_tasks_count = len(self._active_threads)
             if tt == TT_MP or tt is None or tt is False:
                 if not tt is False:
@@ -545,18 +566,17 @@ class TaskSupervisor:
         with self._lock:
             if task.tt == TT_THREAD:
                 self._active_threads.add(task.id)
-                self._active_threads_by_t.add(task.task)
                 if debug:
                     logger.debug(
                         'new task {}: {}, {} thread pool size: {} / {}'.format(
-                            task.id, task.task, _priorities[task.priority],
+                            task.id, task.target, _priorities[task.priority],
                             len(self._active_threads), self.thread_pool_size))
             elif task.tt == TT_MP:
                 self._active_mps.add(task.id)
                 if debug:
                     logger.debug(
                         'new task {}: {}, {} mp pool size: {} / {}'.format(
-                            task.id, task.task, _priorities[task.priority],
+                            task.id, task.target, _priorities[task.priority],
                             len(self._active_mps), self.mp_pool_size))
 
     async def _start_task(self, task):
@@ -569,55 +589,49 @@ class TaskSupervisor:
             await asyncio.sleep(task.delay)
             task.mark_started()
         if task.tt == TT_THREAD:
-            task.task.start()
+            self.thread_pool.submit(task.target, *task.args, **task.kwargs)
         elif task.tt == TT_MP:
-            kw = task.task[2].copy() if task.task[2] else {}
-            kw['_task_id'] = task.id
-            self.mp_pool.apply_async(task.task[0], task.task[1], kw,
-                                     task.task[3])
+            self.mp_pool.apply_async(task.target, task.args, task.kwargs,
+                                     task.callback)
         time_spent = task.time_started - task.time_queued
         if time_spent > self.timeout_critical:
             logger.critical(
-                self.timeout_message.format(task_id, task.task, time_spent))
+                self.timeout_message.format(task_id, task.target, time_spent))
             self.timeout_critical_func(task)
         elif time_spent > self.timeout_warning:
             logger.warning(
-                self.timeout_message.format(task_id, task.task, time_spent))
+                self.timeout_message.format(task_id, task.target, time_spent))
             self.timeout_warning_func(task)
 
-    def mark_task_completed(self, task=None, task_id=None, tt=None):
+    def mark_task_completed(self, task=None, task_id=None):
         with self._lock:
-            if isinstance(task, Task):
-                task_id = task.id
-                tt = task.tt
-            if tt == TT_THREAD or (not task and not task_id) or isinstance(
-                    task, threading.Thread):
-                if task_id and task_id in self._active_threads:
-                    task = self._active_threads[task_id]
-                elif task is None and task_id is None:
-                    task = threading.current_thread()
-                if task in self._active_threads_by_t:
-                    self._active_threads_by_t.remove(task)
-                    self._active_threads.remove(task._atask_id)
+            if task is None:
+                try:
+                    task = self._tasks[task_id]
+                except:
+                    raise LookupError('Task {} not found'.format(task_id))
+            task_id = task.id
+            tt = task.tt
+            if tt == TT_THREAD:
+                if task_id in self._active_threads:
+                    self._active_threads.remove(task_id)
                     if debug:
                         logger.debug(
                             'removed task {}: {}, thread pool size: {} / {}'.
-                            format(task._atask_id, task,
-                                   len(self._active_threads),
+                            format(task_id, task, len(self._active_threads),
                                    self.thread_pool_size))
-                    self._tasks[task._atask_id].mark_completed()
-                    del self._tasks[task._atask_id]
-            else:
-                if task is None or isinstance(task, Task): task = task_id
-                if task in self._active_mps:
-                    self._active_mps.remove(task)
+                    task.mark_completed()
+                    del self._tasks[task_id]
+            elif tt == TT_MP:
+                if task_id in self._active_mps:
+                    self._active_mps.remove(task_id)
                     if debug:
                         logger.debug(
                             'removed task {}: {} mp pool size: {} / {}'.format(
-                                task, task, len(self._active_mps),
+                                task_id, task, len(self._active_mps),
                                 self.mp_pool_size))
-                self._tasks[task].mark_completed()
-                del self._tasks[task]
+                task.mark_completed()
+                del self._tasks[task_id]
         return True
 
     def start(self, daemon=None):
