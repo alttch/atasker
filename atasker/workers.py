@@ -358,11 +358,19 @@ class BackgroundQueueWorker(BackgroundAsyncWorker):
     def _stop(self, *args, **kwargs):
         super()._stop(*args, **kwargs)
 
+    def before_queue_get(self):
+        pass
+
+    def after_queue_get(self, task):
+        pass
+
     async def loop(self, *args, **kwargs):
         self._Q = self._qclass()
         self.mark_started()
         while self._active:
+            self.before_queue_get()
             task = await self._Q.get()
+            self.after_queue_get(task)
             try:
                 if self._current_executor:
                     await self._executor_stop_event.wait()
