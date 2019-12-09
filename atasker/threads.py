@@ -18,6 +18,8 @@ from atasker import TT_THREAD, TT_MP, TT_COROUTINE
 
 from atasker.supervisor import ALoop, Task
 
+logger = logging.getLogger('atasker')
+
 
 class LocalProxy(threading.local):
     """
@@ -81,7 +83,6 @@ class Locker:
 
     def __init__(self, mod='main', timeout=5, relative=True):
         self.lock = threading.RLock() if relative else threading.Lock()
-        self.logger = logging.getLogger('atasker')
         self.mod = mod
         self.relative = relative
         self.timeout = timeout
@@ -91,7 +92,7 @@ class Locker:
         @wraps(f)
         def do(*args, **kwargs):
             if not self.lock.acquire(timeout=self.timeout):
-                self.logger.critical('{}/{} locking broken'.format(
+                logger.critical('{}/{} locking broken'.format(
                     self.mod, f.__name__))
                 self.critical()
                 return None
@@ -108,7 +109,7 @@ class Locker:
             TimeoutError: if lock not acquired
         """
         if not self.lock.acquire(timeout=self.timeout):
-            self.logger.critical('{} locking broken'.format(self.mod))
+            logger.critical('{} locking broken'.format(self.mod))
             self.critical()
             raise TimeoutError
 
@@ -130,7 +131,6 @@ def background_task(f, *args, **kwargs):
         f: task function
         group: put task thread in the specified group
         name: set task thread name (default: function name)
-        daemon: if True, task thread will be launched as daemon
         priority: task :ref:`priority<priorities>`
         delay: startup delay
         supervisor: custom :doc:`task supervisor<supervisor>`
@@ -172,7 +172,8 @@ def background_task(f, *args, **kwargs):
                                                         loop=loop)
         elif tt == TT_THREAD:
             task_id = str(uuid.uuid4())
-            if kwargs.get('daemon'): t.setDaemon(True)
+            if kwargs.get('daemon'):
+                logger.warning('daemon argument is obsolete')
             return supervisor.put_task(target=_background_task_thread_runner,
                                        args=(f, supervisor, task_id) + args,
                                        kwargs=kw,
