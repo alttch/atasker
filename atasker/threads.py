@@ -129,8 +129,6 @@ def background_task(f, *args, **kwargs):
 
     Args:
         f: task function
-        group: put task thread in the specified group
-        name: set task thread name (default: function name)
         priority: task :ref:`priority<priorities>`
         delay: startup delay
         supervisor: custom :doc:`task supervisor<supervisor>`

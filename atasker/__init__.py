@@ -26,6 +26,7 @@ from atasker.f import TaskCollection
 from atasker.threads import LocalProxy
 from atasker.threads import Locker
 from atasker.threads import background_task
+from atasker.threads import spawn
 from atasker.threads import wait_completed
 
 from atasker.co import co_mp_apply
@@ -35,8 +36,6 @@ import atasker.workers
 import aiosched
 
 g = LocalProxy()
-
-spawn = background_task
 
 
 def set_debug(mode=True):

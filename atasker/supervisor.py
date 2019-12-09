@@ -323,6 +323,9 @@ class TaskSupervisor:
         else:
             return False
 
+    def spawn_thread(self, target, args=(), kwargs={}):
+        return self.thread_pool.submit(target, *args, **kwargs)
+
     def put_task(self,
                  target,
                  args=(),
@@ -644,14 +647,14 @@ class TaskSupervisor:
         time_spent = task._tstarted - task._tqueued
         if time_spent > self.timeout_critical:
             logger.critical(
-                self.timeout_message.format(supervisor_id=supervisor_id,
+                self.timeout_message.format(supervisor_id=supervisor.id,
                                             task_id=task_id,
                                             target=task.target,
                                             time_spent=time_spent))
             self.timeout_critical_func(task)
         elif time_spent > self.timeout_warning:
             logger.warning(
-                self.timeout_message.format(supervisor_id=supervisor_id,
+                self.timeout_message.format(supervisor_id=supervisor.id,
                                             task_id=task_id,
                                             target=task.target,
                                             time_spent=time_spent))
