@@ -63,7 +63,8 @@ class Task:
                  kwargs={},
                  callback=None,
                  delay=None,
-                 worker=None, _send_task_id=True):
+                 worker=None,
+                 _send_task_id=True):
         self.id = task_id if task_id is not None else str(uuid.uuid4())
         self.tt = tt
         self.target = target
@@ -110,12 +111,13 @@ class Task:
 
 class ALoop:
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, supervisor=None):
         self.name = name if name else str(uuid.uuid4())
         self._active = False
         self.daemon = False
         self.poll_delay = default_poll_delay
         self.thread = None
+        self.supervisor = supervisor
         self._started = threading.Event()
 
     async def _coro_task(self, task):
@@ -127,21 +129,24 @@ class ALoop:
 
     def background_task(self, coro):
         if not self.is_active():
-            raise RuntimeError('aloop {} is not active'.format(self.name))
+            raise RuntimeError('{} aloop {} is not active'.format(
+                self.supervisor.id, self.name))
         task = Task(TT_COROUTINE, str(uuid.uuid4()), TASK_NORMAL, coro)
         asyncio.run_coroutine_threadsafe(self._coro_task(task), loop=self.loop)
         return task
 
     def run(self, coro):
         if not self.is_active():
-            raise RuntimeError('aloop {} is not active'.format(self.name))
+            raise RuntimeError('{} aloop {} is not active'.format(
+                self.supervisor.id, self.name))
         future = asyncio.run_coroutine_threadsafe(coro, loop=self.loop)
         return future.result()
 
     def start(self):
         if not self._active:
             self._started.clear()
-            t = threading.Thread(name='supervisor_aloop_{}'.format(self.name),
+            t = threading.Thread(name='supervisor_{}_aloop_{}'.format(
+                self.supervisor.id, self.name),
                                  target=self._start_loop)
             t.setDaemon(self.daemon)
             t.start()
@@ -156,16 +161,18 @@ class ALoop:
         try:
             self.loop.run_until_complete(self._loop())
         except CancelledError:
-            logger.warning('aloop {} had active tasks'.format(self.name))
+            logger.warning('{} aloop {} had active tasks'.format(
+                self.supervisor.id, self.name))
 
     async def _loop(self):
         self._stop_event = asyncio.Event()
         self.thread = threading.current_thread()
         self._active = True
-        logger.info('aloop {} started'.format(self.name))
+        logger.info('{} aloop {} started'.format(self.supervisor.id, self.name))
         self._started.set()
         await self._stop_event.wait()
-        logger.info('aloop {} finished'.format(self.name))
+        logger.info('{} aloop {} finished'.format(self.supervisor.id,
+                                                  self.name))
 
     def _cancel_all_tasks(self):
         for task in asyncio.Task.all_tasks(loop=self.loop):
@@ -179,8 +186,8 @@ class ALoop:
             if cancel_tasks:
                 self._cancel_all_tasks()
                 if debug:
-                    logger.debug('aloop {} remaining tasks canceled'.format(
-                        self.name))
+                    logger.debug('{} aloop {} remaining tasks canceled'.format(
+                        self.supervisor.id, self.name))
             if isinstance(wait, bool):
                 to_wait = None
             else:
@@ -191,8 +198,8 @@ class ALoop:
             while True:
                 if to_wait and time.perf_counter() > to_wait:
                     logger.warning(
-                        'aloop {} wait timeout, canceling all tasks'.format(
-                            self.name))
+                        '{} aloop {} wait timeout, canceling all tasks'.format(
+                            self.supervisor.id, self.name))
                     self._cancel_all_tasks()
                     break
                 else:
@@ -212,10 +219,11 @@ class ALoop:
 
 class TaskSupervisor:
 
-    timeout_message = 'task {}: {} started in {:.3f} seconds. ' + \
+    timeout_message = '{supervisor_id} task {task_id}: ' + \
+            '{target} started in {time_spent:.3f} seconds. ' + \
             'Increase pool size or decrease number of workers'
 
-    def __init__(self):
+    def __init__(self, supervisor_id=None):
 
         self.poll_delay = default_poll_delay
 
@@ -223,6 +231,7 @@ class TaskSupervisor:
         self.timeout_warning_func = None
         self.timeout_critical = default_timeout_critical
         self.timeout_critical_func = None
+        self.id = supervisor_id if supervisor_id else str(uuid.uuid4())
 
         self._active_threads = set()
         self._active_mps = set()
@@ -258,8 +267,14 @@ class TaskSupervisor:
             TASK_NORMAL] = self.thread_pool_size + self.thread_reserve_normal
         self._max_threads[TASK_HIGH] = self.thread_pool_size + \
                 self.thread_reserve_normal + self.thread_reserve_high
+        max_size = kwargs.get('max_size')
         self.thread_pool = ThreadPoolExecutor(
-            max_workers=kwargs.get('max_size'))
+            max_workers=max_size,
+            thread_name_prefix='supervisor_{}_pool'.format(self.id))
+        if max_size is not None and self._max_threads[TASK_HIGH] > max_size:
+            logger.warning(
+                'supervisor {} executor thread pool max size is lower than reservations'
+                .format(self.id))
 
     def set_mp_pool(self, **kwargs):
         for p in ['pool_size', 'reserve_normal', 'reserve_high']:
@@ -298,7 +313,8 @@ class TaskSupervisor:
                  delay=None,
                  tt=TT_THREAD,
                  task_id=None,
-                 worker=None, _send_task_id=True):
+                 worker=None,
+                 _send_task_id=True):
         if not self._started.is_set() or not self._active or target is None:
             return
         ti = Task(tt,
@@ -309,7 +325,8 @@ class TaskSupervisor:
                   kwargs=kwargs,
                   callback=callback,
                   delay=delay,
-                  worker=worker, _send_task_id=_send_task_id)
+                  worker=worker,
+                  _send_task_id=_send_task_id)
         ti.time_queued = time.time()
         with self._lock:
             self._tasks[ti.id] = ti
@@ -326,7 +343,8 @@ class TaskSupervisor:
         return ti
 
     async def _task_processor(self, queue, priority, tt):
-        logger.debug('task processor {}/{} started'.format(tt, priority))
+        logger.debug('{} task processor {}/{} started'.format(
+            self.id, tt, priority))
         while True:
             task = await queue.get()
             if task is None: break
@@ -349,8 +367,8 @@ class TaskSupervisor:
                 self._lock.release()
             self.mark_task_started(task)
             self.event_loop.create_task(self._start_task(task))
-        logger.debug('task processor {}/{} finished'.format(
-            tt, _priorities[priority]))
+        logger.debug('{} task processor {}/{} finished'.format(
+            self.id, tt, _priorities[priority]))
         self._processors_stopped[(tt, priority)].set()
 
     def get_task(self, task_id):
@@ -387,8 +405,8 @@ class TaskSupervisor:
                 scheduler = self.async_job_schedulers[scheduler]
             scheduler.cancel(job)
         else:
-            logger.warning('supervisor async job cancellation ' +
-                           'requested but job not specified')
+            logger.warning('{} async job cancellation ' +
+                           'requested but job not specified'.format(self.id))
 
     def register_sync_scheduler(self, scheduler):
         with self._lock:
@@ -423,9 +441,9 @@ class TaskSupervisor:
             raise RuntimeError('Name "__supervisor__" is reserved')
         with self._lock:
             if name in self.aloops:
-                logger.error('loop {} already exists'.format(name))
+                logger.error('{} loop {} already exists'.format(self.id, name))
                 return False
-        l = ALoop(name)
+        l = ALoop(name, supervisor=self)
         l.daemon = daemon
         l.poll_delay = self.poll_delay
         with self._lock:
@@ -450,8 +468,8 @@ class TaskSupervisor:
             raise RuntimeError('Name "__supervisor__" is reserved')
         with self._lock:
             if name in self.async_job_schedulers:
-                logger.error(
-                    'async job_scheduler {} already exists'.format(name))
+                logger.error('{} async job_scheduler {} already exists'.format(
+                    self.id, name))
                 return False
         l = AsyncJobScheduler(name)
         if aloop is None:
@@ -487,7 +505,7 @@ class TaskSupervisor:
     def start_aloop(self, name):
         with self._lock:
             if name not in self.aloops:
-                logger.error('loop {} not found'.format(name))
+                logger.error('{} loop {} not found'.format(self.id, name))
                 return False
             else:
                 self.aloops[name].start()
@@ -498,7 +516,7 @@ class TaskSupervisor:
             self._lock.acquire()
         try:
             if name not in self.aloops:
-                logger.error('loop {} not found'.format(name))
+                logger.error('{} loop {} not found'.format(self.id, name))
                 return False
             else:
                 self.aloops[name].stop(wait=wait, cancel_tasks=cancel_tasks)
@@ -518,6 +536,7 @@ class TaskSupervisor:
 
         result = SupervisorInfo()
         with self._lock:
+            result.id = self.id
             result.active = self._active
             result.started = self._started.is_set()
             for p in ['pool_size', 'reserve_normal', 'reserve_high']:
@@ -568,15 +587,18 @@ class TaskSupervisor:
                 self._active_threads.add(task.id)
                 if debug:
                     logger.debug(
-                        'new task {}: {}, {} thread pool size: {} / {}'.format(
-                            task.id, task.target, _priorities[task.priority],
-                            len(self._active_threads), self.thread_pool_size))
+                        '{} new task {}: {}, {} thread pool size: {} / {}'.
+                        format(self.id, task.id, task.target,
+                               _priorities[task.priority],
+                               len(self._active_threads),
+                               self.thread_pool_size))
             elif task.tt == TT_MP:
                 self._active_mps.add(task.id)
                 if debug:
                     logger.debug(
-                        'new task {}: {}, {} mp pool size: {} / {}'.format(
-                            task.id, task.target, _priorities[task.priority],
+                        '{} new task {}: {}, {} mp pool size: {} / {}'.format(
+                            self.id, task.id,
+                            task.target, _priorities[task.priority],
                             len(self._active_mps), self.mp_pool_size))
 
     async def _start_task(self, task):
@@ -596,11 +618,17 @@ class TaskSupervisor:
         time_spent = task.time_started - task.time_queued
         if time_spent > self.timeout_critical:
             logger.critical(
-                self.timeout_message.format(task_id, task.target, time_spent))
+                self.timeout_message.format(supervisor_id=supervisor_id,
+                                            task_id=task_id,
+                                            target=task.target,
+                                            time_spent=time_spent))
             self.timeout_critical_func(task)
         elif time_spent > self.timeout_warning:
             logger.warning(
-                self.timeout_message.format(task_id, task.target, time_spent))
+                self.timeout_message.format(supervisor_id=supervisor_id,
+                                            task_id=task_id,
+                                            target=task.target,
+                                            time_spent=time_spent))
             self.timeout_warning_func(task)
 
     def mark_task_completed(self, task=None, task_id=None):
@@ -617,8 +645,9 @@ class TaskSupervisor:
                     self._active_threads.remove(task_id)
                     if debug:
                         logger.debug(
-                            'removed task {}: {}, thread pool size: {} / {}'.
-                            format(task_id, task, len(self._active_threads),
+                            '{} removed task {}: {}, thread pool size: {} / {}'.
+                            format(self.id, task_id, task,
+                                   len(self._active_threads),
                                    self.thread_pool_size))
                     task.mark_completed()
                     del self._tasks[task_id]
@@ -627,9 +656,9 @@ class TaskSupervisor:
                     self._active_mps.remove(task_id)
                     if debug:
                         logger.debug(
-                            'removed task {}: {} mp pool size: {} / {}'.format(
-                                task_id, task, len(self._active_mps),
-                                self.mp_pool_size))
+                            '{} removed task {}: {} mp pool size: {} / {}'.
+                            format(self.id, task_id, task,
+                                   len(self._active_mps), self.mp_pool_size))
                 task.mark_completed()
                 del self._tasks[task_id]
         return True
@@ -638,7 +667,7 @@ class TaskSupervisor:
         self._active = True
         self._main_loop_active = True
         t = threading.Thread(
-            name='supervisor_event_loop',
+            name='supervisor_{}_event_loop'.format(self.id),
             target=self._start_event_loop,
             daemon=daemon if daemon is not None else self.daemon)
         t.start()
@@ -676,7 +705,7 @@ class TaskSupervisor:
                 self.event_loop.create_task(
                     self._task_processor(self._Qmp[p], p, TT_MP))
         self._started.set()
-        logger.info('supervisor event loop started')
+        logger.info('supervisor {} event loop started'.format(self.id))
         while self._main_loop_active:
             data = await self._Q.get()
             try:
@@ -684,14 +713,14 @@ class TaskSupervisor:
                 r, res, t_put = data
                 if r == RQ_SCHEDULER:
                     if debug:
-                        logger.debug('new scheduler {}'.format(res))
+                        logger.debug('{} new scheduler {}'.format(self.id, res))
                     asyncio.run_coroutine_threadsafe(
                         self._launch_scheduler_loop(res), loop=res.worker_loop)
             finally:
                 self._Q.task_done()
         for i, t in self._processors_stopped.items():
             await t.wait()
-        logger.info('supervisor event loop finished')
+        logger.info('supervisor {} event loop finished'.format(self.id))
 
     def _start_event_loop(self):
         if self._active:
@@ -700,14 +729,16 @@ class TaskSupervisor:
             mp = ', mp pool: {} + {} RN + {} RH'.format(
                 self.mp_pool_size, self.mp_reserve_normal,
                 self.mp_reserve_high) if hasattr(self, 'mp_pool_size') else ''
-            logger.info('supervisor started, thread pool: ' +
-                        '{} + {} RN + {} RH{}'.format(
-                            self.thread_pool_size, self.thread_reserve_normal,
-                            self.thread_reserve_high, mp))
+            logger.info(
+                ('supervisor {} started, thread pool: ' +
+                 '{} + {} RN + {} RH{}').format(self.id, self.thread_pool_size,
+                                                self.thread_reserve_normal,
+                                                self.thread_reserve_high, mp))
             try:
                 self.event_loop.run_until_complete(self._main_loop())
             except CancelledError:
-                logger.warning('supervisor loop had active tasks')
+                logger.warning('supervisor {} loop had active tasks'.format(
+                    self.id))
 
     def _cancel_all_tasks(self):
         with self._lock:
@@ -738,14 +769,14 @@ class TaskSupervisor:
         if stop_schedulers:
             self._stop_async_job_schedulers(wait)
             self._stop_schedulers(True if wait else False)
-            if debug: logger.debug('schedulers stopped')
+            if debug: logger.debug('{} schedulers stopped'.format(self.id))
         with self._lock:
             for i, l in self.aloops.items():
                 self.stop_aloop(i,
                                 wait=wait,
                                 cancel_tasks=cancel_tasks,
                                 _lock=False)
-            if debug: logger.debug('async loops stopped')
+            if debug: logger.debug('{} async loops stopped'.format(self.id))
         if (to_wait or wait is True) and not cancel_tasks:
             while True:
                 with self._lock:
@@ -753,20 +784,23 @@ class TaskSupervisor:
                         break
                 time.sleep(self.poll_delay)
                 if to_wait and time.perf_counter() > to_wait: break
-        if debug: logger.debug('no task in queues')
+        if debug: logger.debug('{} no task in queues'.format(self.id))
         if to_wait or wait is True:
-            if debug: logger.debug('waiting for tasks to finish')
+            if debug:
+                logger.debug('{} waiting for tasks to finish'.format(self.id))
             while True:
                 if not self._active_threads:
                     break
                 if to_wait and time.perf_counter() > to_wait:
                     logger.warning(
-                        'wait timeout, skipping, hope threads will finish')
+                        '{} wait timeout, skipping, hope threads will finish'.
+                        format(self.id))
                     break
                 time.sleep(self.poll_delay)
         if cancel_tasks:
             self._cancel_all_tasks()
-            if debug: logger.debug('remaining tasks canceled')
+            if debug:
+                logger.debug('{} remaining tasks canceled'.format(self.id))
         if to_wait or wait is True:
             while True:
                 with self._lock:
@@ -774,8 +808,8 @@ class TaskSupervisor:
                             to_wait and time.perf_counter() > to_wait):
                         break
                 time.sleep(self.poll_delay)
-        if debug: logger.debug('no active threads/mps')
-        if debug: logger.debug('stopping event loop')
+        if debug: logger.debug('{} no active threads/mps'.format(self.id))
+        if debug: logger.debug('{} stopping event loop'.format(self.id))
         asyncio.run_coroutine_threadsafe(self._Q.put(None),
                                          loop=self.event_loop)
         for p in (TASK_LOW, TASK_NORMAL, TASK_HIGH):
@@ -789,7 +823,8 @@ class TaskSupervisor:
         if wait is True or to_wait:
             while True:
                 if to_wait and time.perf_counter() > to_wait:
-                    logger.warning('wait timeout, canceling all tasks')
+                    logger.warning(
+                        '{} wait timeout, canceling all tasks'.format(self.id))
                     self._cancel_all_tasks()
                     break
                 else:
@@ -804,4 +839,4 @@ class TaskSupervisor:
             for i, v in self._tasks.items():
                 v.status = TASK_STATUS_CANCELED
         self._started.clear()
-        logger.info('supervisor stopped')
+        logger.info('supervisor {} stopped'.format(self.id))

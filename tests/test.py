@@ -249,7 +249,7 @@ class Test(unittest.TestCase):
         t.start()
         wait()
         t.stop()
-        self.assertEqual(result.test_aloop, 'supervisor_aloop_test1')
+        self.assertEqual(result.test_aloop, 'supervisor_default_aloop_test1')
 
     def test_result_async(self):
 

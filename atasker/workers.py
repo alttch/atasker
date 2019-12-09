@@ -221,11 +221,6 @@ class BackgroundWorker:
         self.supervisor.unregister_sync_scheduler(self)
 
     def wait_until_stop(self):
-        if isinstance(self._current_executor, threading.Thread):
-            try:
-                self._current_executor.join()
-            except:
-                pass
         self._stopped.wait()
 
 

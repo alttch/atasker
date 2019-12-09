@@ -11,7 +11,7 @@ from atasker.supervisor import TASK_CRITICAL
 
 from atasker.supervisor import TT_THREAD, TT_MP, TT_COROUTINE
 
-task_supervisor = TaskSupervisor()
+task_supervisor = TaskSupervisor(supervisor_id='default')
 
 from atasker.workers import background_worker
 
