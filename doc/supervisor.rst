@@ -90,7 +90,7 @@ Poll delay
 Poll delay is a delay (in seconds), which is used by task queue manager, in
 :doc:`workers<workers>` and some other methods like *start/stop*.
 
-Lower poll delay = higher CPU usage, higher poll delay = faster reaction time.
+Lower poll delay = higher CPU usage, higher poll delay = lower reaction time.
 
 Default poll delay is 0.1 second. Can be changed with:
 
